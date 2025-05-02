@@ -71,7 +71,7 @@ export default class Java_maven extends Base_java {
 	 * @private
 	 */
 	#createSbomStackAnalysis(manifest, opts = {}) {
-		const mvn = this.#selectMvnRuntime(manifest, opts)
+		const mvn = this.selectToolBinary('mvn', manifest, opts)
 
 		// clean maven target
 		try {
@@ -136,7 +136,7 @@ export default class Java_maven extends Base_java {
 	 * @private
 	 */
 	#getSbomForComponentAnalysis(manifestPath, opts = {}) {
-		const mvn = this.#selectMvnRuntime(manifestPath, opts)
+		const mvn = this.selectToolBinary('mvn', manifestPath, opts)
 
 		const tmpEffectivePom = path.resolve(path.join(path.dirname(manifestPath), 'effective-pom.xml'))
 		const targetPom = manifestPath
@@ -200,68 +200,6 @@ export default class Java_maven extends Base_java {
 			ignore: false
 		}
 		return rootDependency
-	}
-
-	#selectMvnRuntime(manifestPath, opts) {
-		// get custom maven path
-		let mvn = getCustomPath('mvn', opts)
-
-		// check if mvnw is preferred and available
-		let useMvnw = getWrapperPreference('mvn', opts)
-		if (useMvnw) {
-			const mvnw = this.#traverseForMvnw(manifestPath)
-			if (mvnw !== undefined) {
-				try {
-					this._invokeCommand(mvnw, ['--version'])
-				} catch (error) {
-					if (error.code === 'ENOENT') {
-						useMvnw = false
-					} else {
-						throw new Error(`failed to check for mvnw`, {cause: error})
-					}
-				}
-				mvn = useMvnw ? mvnw : mvn
-			}
-		} else {
-			// verify maven is accessible
-			try {
-				this._invokeCommand(mvn, ['--version'])
-			} catch (error) {
-				if (error.code === 'ENOENT') {
-					throw new Error(`maven not accessible at "${mvn}"`)
-				} else {
-					throw new Error(`failed to check for maven`, {cause: error})
-				}
-			}
-		}
-		return mvn
-	}
-
-	/**
-	 *
-	 * @param {string} startingManifest - the path of the manifest from which to start searching for mvnw
-	 * @param {string} repoRoot - the root of the repository at which point to stop searching for mvnw, derived via git if unset and then fallsback
-	 * to the root of the drive the manifest is on (assumes absolute path is given)
-	 * @returns
-	 */
-	#traverseForMvnw(startingManifest, repoRoot = undefined) {
-		repoRoot = repoRoot || getGitRootDir(path.resolve(path.dirname(startingManifest))) || path.parse(path.resolve(startingManifest)).root
-
-		const wrapperName = 'mvnw' + (process.platform === 'win32' ? '.cmd' : '');
-		const wrapperPath = path.join(path.resolve(path.dirname(startingManifest)), wrapperName);
-
-		try {
-			fs.accessSync(wrapperPath, fs.constants.X_OK)
-		} catch(error) {
-			if (error.code === 'ENOENT') {
-				if (path.resolve(path.dirname(startingManifest)) === repoRoot) {
-					return undefined
-				}
-				return this.#traverseForMvnw(path.resolve(path.dirname(startingManifest)), repoRoot)
-			}
-			throw new Error(`failure searching for mvnw`, {cause: error})
-		}
-		return wrapperPath
 	}
 
 	/**
