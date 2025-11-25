@@ -67,9 +67,8 @@ excluded from both linting and coverage.
   to the _Backend_.
   Use [java_maven.js](src/providers/java_maven.js) as an example to get you started.
 * Import the new _Provider_ and list in the in _availableProviders_ array in [provider.js](src/provider.js).
-* Update the _choices_ configuration for the _manifest-name_ positional argument in  [cli.js](src/cli.js).
-* Add Integration Test scenarios for the added provider in [integration/scenarios](integration/scenarios).
-  Use the [java scenarios](integration/scenarios/maven) as an example.
+* Update the _choices_ configuration for the _manifest-name_ positional argument in [cli.js](src/cli.js).
+* Add Integration Test scenarios for the added provider in the [trustification/integration](https://github.com/trustification/exhort-integration-tests/) repository.
 * Update the documentation. This document and [README.md](README.md).
 
 ### Integration Tests

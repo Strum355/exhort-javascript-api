@@ -94,12 +94,7 @@ jobs:
       - name: Compile project
         run: npm run compile
 
-      - name: Run integration tests
-        run: npm run integration-tests
-        env:
-          TRUSTIFY_DA_BACKEND_URL: 'https://exhort.stage.devshift.net'
-
-      - name: Run integration tests cli
+      - name: Run CLI integration tests
         working-directory: integration
         run: bash ./run_its.sh
         env:
