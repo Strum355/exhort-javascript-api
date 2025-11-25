@@ -38,7 +38,5 @@
       }
     }
   },
-  "ignorePatterns": [
-    "integration"
-  ]
+  "ignorePatterns": []
 }
