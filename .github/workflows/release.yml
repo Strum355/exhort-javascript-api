@@ -87,18 +87,6 @@ jobs:
           git checkout -b "$BRANCH"
           git add package.json
           git add package-lock.json
-          git commit -m "build: updated package with ${{ steps.bump.outputs.version }} [skip ci]"
-          git push origin "$BRANCH"
-
-      - name: Create GitHub release tag
-        uses: softprops/action-gh-release@v1
-        with:
-          name: "Release ${{ steps.bump.outputs.version }}"
-          tag_name: "v${{ steps.bump.outputs.version }}"
-          target_commitish: "release/v${{ steps.bump.outputs.version }}"
-          generate_release_notes: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Create Pull Request for release + next version
         uses: peter-evans/create-pull-request@v5
@@ -109,3 +97,13 @@ jobs:
           title: "build: release ${{ steps.bump.outputs.version }} [skip ci]"
           commit-message: "build: release ${{ steps.bump.outputs.version }} [skip ci]"
           signoff: true
+
+      - name: Create GitHub release tag
+        uses: softprops/action-gh-release@v1
+        with:
+          name: "Release ${{ steps.bump.outputs.version }}"
+          tag_name: "v${{ steps.bump.outputs.version }}"
+          target_commitish: "release/v${{ steps.bump.outputs.version }}"
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
