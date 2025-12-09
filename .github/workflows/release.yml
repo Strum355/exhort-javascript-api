@@ -87,16 +87,8 @@ jobs:
           git checkout -b "$BRANCH"
           git add package.json
           git add package-lock.json
-
-      - name: Create Pull Request for release + next version
-        uses: peter-evans/create-pull-request@v5
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          branch: release/v${{ steps.bump.outputs.version }}
-          base: main
-          title: "build: release ${{ steps.bump.outputs.version }} [skip ci]"
-          commit-message: "build: release ${{ steps.bump.outputs.version }} [skip ci]"
-          signoff: true
+          git commit -m "build: release ${{ steps.bump.outputs.version }} [skip ci]"
+          git push origin "$BRANCH""
 
       - name: Create GitHub release tag
         uses: softprops/action-gh-release@v1
@@ -107,3 +99,12 @@ jobs:
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create Pull Request for release + next version
+        run: >
+          gh pr create
+            --title "build: release ${{ steps.bump.outputs.version }} [skip ci]"
+            --base main --head "release/v${{ steps.bump.outputs.version }}"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
