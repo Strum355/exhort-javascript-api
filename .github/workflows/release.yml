@@ -79,46 +79,33 @@ jobs:
       - name: Install project modules
         run: npm ci
 
-      - name: Commit and push package modifications
+      - name: Create release branch
         run: |
+          BRANCH="release/v${{ steps.bump.outputs.version }}"
+          git config user.name "${{ github.actor }}"
+          git config user.email "${{ github.actor }}@users.noreply.github.com"
+          git checkout -b "$BRANCH"
           git add package.json
           git add package-lock.json
           git commit -m "build: updated package with ${{ steps.bump.outputs.version }} [skip ci]"
-          git push
+          git push origin "$BRANCH"
 
-      - name: Create and push new tag
-        run: |
-          git tag ${{ steps.bump.outputs.version }} -m "${{ steps.bump.outputs.version }}"
-          git push origin ${{ steps.bump.outputs.version }}
-
-      - name: Create release notes
-        uses: actions/github-script@v6
-        id: release-notes
+      - name: Create GitHub release tag
+        uses: softprops/action-gh-release@v1
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const repo_name = context.payload.repository.full_name
-            const previousTag = '${{ steps.fetch-tag.outputs.oldest-tag }}'
-            const currentTag = '${{ steps.bump.outputs.version }}'
-            
-            const response = await github.request('POST /repos/' + repo_name + '/releases/generate-notes', {
-              tag_name: currentTag,
-              previous_tag_name: previousTag || undefined
-            })
-            return response.data.body
+          name: "Release ${{ steps.bump.outputs.version }}"
+          tag_name: "v${{ steps.bump.outputs.version }}"
+          target_commitish: "release/v${{ steps.bump.outputs.version }}"
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Create a release
-        uses: actions/github-script@v6
+      - name: Create Pull Request for release + next version
+        uses: peter-evans/create-pull-request@v5
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const repo_name = context.payload.repository.full_name
-            const response = await github.request('POST /repos/' + repo_name + '/releases', {
-              tag_name: '${{ steps.bump.outputs.version }}',
-              name: '${{ steps.bump.outputs.version }}',
-              draft: false,
-              body: ${{ steps.release-notes.outputs.result }},
-              prerelease: false,
-              make_latest: 'true'
-            })
-
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: release/v${{ steps.bump.outputs.version }}
+          base: main
+          title: "build: release ${{ steps.bump.outputs.version }} [skip ci]"
+          commit-message: "build: release ${{ steps.bump.outputs.version }} [skip ci]"
+          signoff: true
