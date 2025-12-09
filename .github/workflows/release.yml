@@ -88,7 +88,7 @@ jobs:
           git add package.json
           git add package-lock.json
           git commit -m "build: release ${{ steps.bump.outputs.version }} [skip ci]"
-          git push origin "$BRANCH""
+          git push origin "$BRANCH"
 
       - name: Create GitHub release tag
         uses: softprops/action-gh-release@v1
