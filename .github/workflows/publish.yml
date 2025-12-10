@@ -5,6 +5,12 @@ name: Publish
 on:
   workflow_dispatch:
   workflow_call:
+    inputs:
+      branch:
+        description: The branch containing the release code snapshot
+        required: true
+        type: string
+        default: ""
   push:
     branches:
       - main
@@ -73,7 +79,7 @@ jobs:
       - name: Checkout sources
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.ref }}
+          ref: ${{ inputs.branch || github.ref }}
           fetch-depth: 0
 
       - name: Install node 24

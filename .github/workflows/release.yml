@@ -113,4 +113,6 @@ jobs:
 
       - name: Run Publish pipeline
         uses: ./.github/workflows/publish.yml
+        with:
+          branch: "release/v${{ steps.bump.outputs.version }}"
 
