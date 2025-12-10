@@ -111,3 +111,6 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Run Publish pipeline
+        uses: ./.github/workflows/publish.yml
+

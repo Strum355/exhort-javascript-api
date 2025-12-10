@@ -4,14 +4,10 @@ name: Publish
 
 on:
   workflow_dispatch:
+  workflow_call:
   push:
     branches:
       - main
-    tags:
-      - 'v*.*.*'
-  release:
-    types:
-      - published
 
 permissions:
   contents: write
@@ -19,7 +15,7 @@ permissions:
 
 jobs:
   publish-ea:
-    if: startsWith(github.ref, 'refs/tags/') == false
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     name: Publish EA release to NPM
     steps:
@@ -70,7 +66,7 @@ jobs:
           npm publish --verbose --tag ea --access public --provenance
 
   publish-release:
-    if: startsWith(github.ref, 'refs/tags/')
+    if: github.event_name == 'workflow_call' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     name: Publish release to NPM
     steps:
@@ -89,21 +85,6 @@ jobs:
 
       - name: Update npm
         run: npm install -g npm@latest
-
-      - name: Get tag name
-        id: tag
-        run: |
-          TAG_NAME=${GITHUB_REF#refs/tags/}
-          echo "name=$TAG_NAME" >> "$GITHUB_OUTPUT"
-
-      - name: Update package.json with tag version
-        id: update-version
-        run: |
-          TAG_NAME="${{ steps.tag.outputs.name }}"
-          # Remove 'v' prefix if present
-          VERSION=${TAG_NAME#v}
-          npm version "$VERSION" --no-git-tag-version
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Install project modules
         run: npm ci
