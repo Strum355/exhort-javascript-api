@@ -22,8 +22,6 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
-    outputs:
-      version: ${{ steps.bump.outputs.version }}
     steps:
       - name: Checkout sources
         uses: actions/checkout@v4
@@ -41,33 +39,6 @@ jobs:
         run: |
           git config user.name "${{ github.actor }}"
           git config user.email "${{ github.actor }}@users.noreply.github.com"
-
-      - name: Get previous released annotated tag
-        id: last-release
-        run: |
-          # Get the latest tag that doesn't have -ea suffix (handles both -ea. and -ea- formats)
-          TAG=$(git tag -l --sort=-version:refname | grep -vE -- '-ea[.-]' | head -n 1)
-          if [ -z "$TAG" ]; then
-            # If no release tag exists, use the base version from package.json
-            BASE_VERSION=$(node -p "require('./package.json').version" | sed -E 's/-ea[.-][0-9]+$//')
-            echo "base-tag=$BASE_VERSION" >> "$GITHUB_OUTPUT"
-            echo "full-tag=$BASE_VERSION" >> "$GITHUB_OUTPUT"
-          else
-            echo "base-tag=$TAG" >> "$GITHUB_OUTPUT"
-            echo "full-tag=$TAG" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Get first tag in current development iteration
-        id: fetch-tag
-        run: |
-          BASE_TAG="${{ steps.last-release.outputs.base-tag }}"
-          # Find the oldest EA tag for this base version (handles both -ea. and -ea- formats)
-          OLDEST_EA_TAG=$(git tag -l --sort=creatordate | grep -E "^${BASE_TAG}-ea[.-]" | head -n 1)
-          if [ -n "$OLDEST_EA_TAG" ]; then
-            echo "oldest-tag=$OLDEST_EA_TAG" >> "$GITHUB_OUTPUT"
-          else
-            echo "oldest-tag=$BASE_TAG" >> "$GITHUB_OUTPUT"
-          fi
 
       - name: Update package with new version
         id: bump
@@ -91,6 +62,12 @@ jobs:
           git add package-lock.json
           git commit -m "build: release ${{ steps.bump.outputs.version }} [skip ci]"
           git push origin "$BRANCH"
+          echo "$BRANCH" > releasebranch.txt
+
+      - uses: actions/upload-artifact@v2
+        with:
+          name: releasebranch
+          path: releasebranch.txt
 
       - name: Create GitHub release tag
         uses: softprops/action-gh-release@v1
@@ -111,14 +88,3 @@ jobs:
             --head "release/v${{ steps.bump.outputs.version }}"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  trigger-publish:
-    name: Trigger Publish pipeline
-    needs: create-release
-    permissions:
-      contents: write
-      id-token: write
-    uses: ./.github/workflows/publish.yml
-    with:
-      branch: "release/v${{ needs.create-release.outputs.version }}"
-
