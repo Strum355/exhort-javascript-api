@@ -23,6 +23,8 @@ jobs:
   create-release:
     runs-on: ubuntu-latest
     name: Create release
+    outputs:
+      version: ${{ steps.bump.outputs.version }}
     steps:
       - name: Checkout sources
         uses: actions/checkout@v4
@@ -111,8 +113,10 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Run Publish pipeline
-        uses: ./.github/workflows/publish.yml
-        with:
-          branch: "release/v${{ steps.bump.outputs.version }}"
+  trigger-publish:
+    name: Trigger Publish pipeline
+    needs: create-release
+    uses: ./.github/workflows/publish.yml
+    with:
+      branch: "release/v${{ needs.create-release.outputs.version }}"
 
