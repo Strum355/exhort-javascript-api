@@ -14,12 +14,12 @@ suite('testing the OCI image data provider', () => {
 	].forEach(imageRef => {
 		test(`verify OCI image sbom provided with scenario ${imageRef}`, () => {
 			let expectedSbom = fs.readFileSync(`test/providers/tst_manifests/image/${imageRef}.json`).toString().trim()
-			expectedSbom = JSON.stringify(JSON.parse(expectedSbom), null, 4)
+			expectedSbom = JSON.parse(expectedSbom)
 
 			let providedSbom = generateImageSBOM(parseImageRef(imageRef))
 			providedSbom['metadata'] = null
 			providedSbom['serialNumber'] = null
-			expect(JSON.stringify(providedSbom, null, 4).trimEnd()).to.deep.equal(expectedSbom)
+			expect(providedSbom, null, 4).to.deep.equal(expectedSbom)
 		}).timeout(40000)
 	});
 
@@ -36,4 +36,4 @@ suite('testing the OCI image data provider', () => {
 		}).timeout(10000)
 	})
 
-}).beforeAll(() => clock = useFakeTimers(new Date('2023-08-07T00:00:00.000Z'))).afterAll(()=> clock.restore());
+}).beforeAll(() => clock = useFakeTimers(new Date('2023-08-07T00:00:00.000Z'))).afterAll(() => clock.restore());
