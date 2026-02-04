@@ -74,6 +74,7 @@ jobs:
           repo: anchore/syft
           platform: linux
           arch: amd64
+          tag: v1.41.1
 
       - name: Setup skopeo
         run: sudo apt update && sudo apt-get -y install skopeo
