@@ -39,9 +39,9 @@ export default { componentAnalysis, stackAnalysis, imageAnalysis, validateToken 
  * TRUSTIFY_DA_SYFT_PATH?: string | undefined,
  * TRUSTIFY_DA_YARN_PATH?: string | undefined,
  * MATCH_MANIFEST_VERSIONS?: string | undefined,
- * RHDA_SOURCE?: string | undefined,
- * RHDA_TOKEN?: string | undefined,
- * RHDA_TELEMETRY_ID?: string | undefined,
+ * TRUSTIFY_DA_SOURCE?: string | undefined,
+ * TRUSTIFY_DA_TOKEN?: string | undefined,
+ * TRUSTIFY_DA_TELEMETRY_ID?: string | undefined,
  * [key: string]: string | undefined,
  * }} Options
  */

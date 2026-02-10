@@ -9,11 +9,11 @@ import { RegexNotToBeLogged, getCustom } from "./tools.js";
 
 export default { requestComponent, requestStack, requestImages, validateToken }
 
-const rhdaTokenHeader = "rhda-token";
-const rhdaTelemetryId = "rhda-telemetry-id";
-const rhdaSourceHeader = "rhda-source"
-const rhdaOperationTypeHeader = "rhda-operation-type"
-const rhdaPackageManagerHeader = "rhda-pkg-manager"
+const rhdaTokenHeader = "trust-da-token";
+const rhdaTelemetryId = "telemetry-anonymous-id";
+const rhdaSourceHeader = "trust-da-source"
+const rhdaOperationTypeHeader = "trust-da-operation-type"
+const rhdaPackageManagerHeader = "trust-da-pkg-manager"
 
 /**
  * Adds proxy agent configuration to fetch options if a proxy URL is specified
@@ -229,11 +229,12 @@ async function validateToken(url, opts = {}) {
  *
  * @param {string} headerName - the header name to populate in request
  * @param headers
- * @param {import("index.js").Options} [opts={}] - optional various options to pass along the application
+ * @param {string} optsKey - key in the options object to use the value for
+ * @param {import("index.js").Options} [opts={}] - options input object to fetch header values from
  * @private
  */
-function setRhdaHeader(headerName, headers, opts) {
-	let rhdaHeaderValue = getCustom(headerName.toUpperCase().replaceAll("-", "_"), null, opts);
+function setRhdaHeader(headerName, headers, optsKey, opts) {
+	let rhdaHeaderValue = getCustom(optsKey, null, opts);
 	if (rhdaHeaderValue) {
 		headers[headerName] = rhdaHeaderValue
 	}
@@ -245,23 +246,12 @@ function setRhdaHeader(headerName, headers, opts) {
  * @returns {{}}
  */
 function getTokenHeaders(opts = {}) {
-	let supportedTokens = ['snyk', 'oss-index']
 	let headers = {}
-	supportedTokens.forEach(vendor => {
-		let token = getCustom(`TRUSTIFY_DA_${vendor.replace("-", "_").toUpperCase()}_TOKEN`, null, opts);
-		if (token) {
-			headers[`ex-${vendor}-token`] = token
-		}
-		let user = getCustom(`TRUSTIFY_DA_${vendor.replace("-", "_").toUpperCase()}_USER`, null, opts);
-		if (user) {
-			headers[`ex-${vendor}-user`] = user
-		}
-	})
-	setRhdaHeader(rhdaTokenHeader, headers, opts);
-	setRhdaHeader(rhdaSourceHeader, headers, opts);
-	setRhdaHeader(rhdaOperationTypeHeader, headers, opts);
-	setRhdaHeader(rhdaPackageManagerHeader, headers, opts)
-	setRhdaHeader(rhdaTelemetryId, headers, opts);
+	setRhdaHeader(rhdaTokenHeader, headers, 'TRUSTIFY_DA_TOKEN', opts);
+	setRhdaHeader(rhdaSourceHeader, headers, 'TRUSTIFY_DA_SOURCE', opts);
+	setRhdaHeader(rhdaOperationTypeHeader, headers, rhdaOperationTypeHeader.toUpperCase().replaceAll("-", "_"), opts);
+	setRhdaHeader(rhdaPackageManagerHeader, headers, rhdaPackageManagerHeader.toUpperCase().replaceAll("-", "_"), opts)
+	setRhdaHeader(rhdaTelemetryId, headers, 'TRUSTIFY_DA_TELEMETRY_ID', opts);
 
 	if (process.env["TRUSTIFY_DA_DEBUG"] === "true") {
 		console.log("Headers Values to be sent to Trustify DA backend:" + EOL)
