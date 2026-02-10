@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=https://www.schemastore.org/dependabot-2.0.json
 version: 2
 updates:
   - package-ecosystem: "npm"
@@ -6,14 +7,26 @@ updates:
       interval: "daily"
     exclude-paths:
       - "test/providers/tst_manifests/**"
+    groups:
+      npm-dependencies:
+        patterns:
+          - "*"
   - package-ecosystem: "docker"
     directory: "/docker-image/Dockerfiles"
     schedule:
       interval: "daily"
+    groups:
+      dockerfile:
+        patterns:
+          - "*"
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
+    groups:
+      github-actions:
+        patterns:
+          - "*"
   - package-ecosystem: "pip"
     directory: "/"
     schedule:
