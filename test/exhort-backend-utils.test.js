@@ -1,11 +1,16 @@
 import { expect } from 'chai'
+import * as chai from 'chai'
+import * as sinon from 'sinon'
+import sinonChai from 'sinon-chai'
 
+import { getTokenHeaders } from '../src/analysis.js';
 import { selectTrustifyDABackend } from '../src/index.js'
 
-const testUrl = 'https://trustify-da.example.com';
-const testUrl2 = 'https://dev.trustify-da.example.com';
+chai.use(sinonChai)
 
 suite('testing Select Trustify DA Backend function', () => {
+	const testUrl = 'https://trustify-da.example.com';
+	const testUrl2 = 'https://dev.trustify-da.example.com';
 
 	test('When TRUSTIFY_DA_BACKEND_URL is set in environment variable, should return that value', () => {
 		process.env['TRUSTIFY_DA_BACKEND_URL'] = testUrl;
@@ -63,3 +68,14 @@ suite('testing Select Trustify DA Backend function', () => {
 }).afterAll(() => {
 	delete process.env['TRUSTIFY_DA_BACKEND_URL'];
 });
+
+suite('verify token header logging', () => {
+	test('don\'t log the token header', () => {
+		getTokenHeaders({
+			'TRUSTIFY_DA_TOKEN': 'banana',
+			'TRUSTIFY_DA_DEBUG': 'true'
+		})
+		// Should only be called once with "Headers Values to be sent to Trustify DA backend:"
+		expect(console.log).to.be.calledOnce
+	})
+}).beforeAll(() => sinon.spy(console, 'log')).afterAll(() => console.log.restore())

@@ -245,7 +245,7 @@ function setRhdaHeader(headerName, headers, optsKey, opts) {
  * @param {import("index.js").Options} [opts={}] - optional various options to pass along the application
  * @returns {{}}
  */
-function getTokenHeaders(opts = {}) {
+export function getTokenHeaders(opts = {}) {
 	let headers = {}
 	setRhdaHeader(rhdaTokenHeader, headers, 'TRUSTIFY_DA_TOKEN', opts);
 	setRhdaHeader(rhdaSourceHeader, headers, 'TRUSTIFY_DA_SOURCE', opts);
@@ -253,7 +253,7 @@ function getTokenHeaders(opts = {}) {
 	setRhdaHeader(rhdaPackageManagerHeader, headers, rhdaPackageManagerHeader.toUpperCase().replaceAll("-", "_"), opts)
 	setRhdaHeader(rhdaTelemetryId, headers, 'TRUSTIFY_DA_TELEMETRY_ID', opts);
 
-	if (process.env["TRUSTIFY_DA_DEBUG"] === "true") {
+	if (getCustom("TRUSTIFY_DA_DEBUG", null, opts) === "true") {
 		console.log("Headers Values to be sent to Trustify DA backend:" + EOL)
 		for (const headerKey in headers) {
 			if (!headerKey.match(RegexNotToBeLogged)) {

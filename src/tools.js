@@ -3,7 +3,7 @@ import { EOL } from "os";
 
 import { PackageURL } from "packageurl-js";
 
-export const RegexNotToBeLogged = /TRUSTIFY_DA_.*_TOKEN|ex-.*-token/
+export const RegexNotToBeLogged = /TRUSTIFY_DA_(.*_)?TOKEN|ex-.*-token|trust-.*-token/
 /**
  *
  * @param {string} key to log its value from environment variables and from opts, if it exists
