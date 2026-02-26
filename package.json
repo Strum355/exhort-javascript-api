@@ -53,6 +53,8 @@
 		"https-proxy-agent": "^7.0.6",
 		"node-fetch": "^3.3.2",
 		"packageurl-js": "~1.0.2",
+		"tree-sitter-requirements": "github:Strum355/tree-sitter-requirements#d0261ee76b84253997fe70d7d397e78c006c3801",
+		"web-tree-sitter": "^0.26.6",
 		"yargs": "^18.0.0"
 	},
 	"devDependencies": {
@@ -64,6 +66,7 @@
 		"c8": "^11.0.0",
 		"chai": "^4.3.7",
 		"eslint": "^8.42.0",
+		"eslint-import-resolver-typescript": "^4.4.4",
 		"eslint-plugin-editorconfig": "^4.0.3",
 		"eslint-plugin-import": "^2.29.1",
 		"esmock": "^2.6.2",

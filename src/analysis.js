@@ -41,7 +41,7 @@ function addProxyAgent(options, opts) {
 async function requestStack(provider, manifest, url, html = false, opts = {}) {
 	opts["source-manifest"] = Buffer.from(fs.readFileSync(manifest).toString()).toString('base64')
 	opts["manifest-type"] = path.parse(manifest).base
-	let provided = provider.provideStack(manifest, opts) // throws error if content providing failed
+	let provided = await provider.provideStack(manifest, opts) // throws error if content providing failed
 	opts["source-manifest"] = ""
 	opts[rhdaOperationTypeHeader.toUpperCase().replaceAll("-", "_")] = "stack-analysis"
 	let startTime = new Date()
@@ -105,7 +105,7 @@ async function requestStack(provider, manifest, url, html = false, opts = {}) {
 async function requestComponent(provider, manifest, url, opts = {}) {
 	opts["source-manifest"] = Buffer.from(fs.readFileSync(manifest).toString()).toString('base64')
 
-	let provided = provider.provideComponent(manifest, opts) // throws error if content providing failed
+	let provided = await provider.provideComponent(manifest, opts) // throws error if content providing failed
 	opts["source-manifest"] = ""
 	opts[rhdaOperationTypeHeader.toUpperCase().replaceAll("-", "_")] = "component-analysis"
 	if (process.env["TRUSTIFY_DA_DEBUG"] === "true") {

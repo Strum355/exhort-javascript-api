@@ -10,7 +10,7 @@ import Javascript_yarn from './providers/javascript_yarn.js';
 import pythonPipProvider from './providers/python_pip.js'
 
 /** @typedef {{ecosystem: string, contentType: string, content: string}} Provided */
-/** @typedef {{isSupported: function(string): boolean, validateLockFile: function(string): void, provideComponent: function(string, {}): Provided, provideStack: function(string, {}): Provided}} Provider */
+/** @typedef {{isSupported: function(string): boolean, validateLockFile: function(string): void, provideComponent: function(string, {}): Provided | Promise<Provided>, provideStack: function(string, {}): Provided | Promise<Provided>}} Provider */
 
 /**
  * MUST include all providers here.
