@@ -32,8 +32,9 @@
     }]
   },
   "settings": {
+	"typescript": {},
     "import/resolver": {
-      "node": {
+      "typescript": {
         "extensions": [".js"]
       }
     }
