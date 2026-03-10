@@ -5,11 +5,7 @@ import { Language, Parser, Query } from 'web-tree-sitter';
 const require = createRequire(import.meta.url);
 
 async function init() {
-	await Parser.init({
-		locateFile() {
-			return require.resolve('web-tree-sitter/web-tree-sitter.wasm')
-		}
-	});
+	await Parser.init();
 	return await Language.load(require.resolve('tree-sitter-requirements/tree-sitter-requirements.wasm'));
 }
 
