@@ -1,12 +1,13 @@
-import { fileURLToPath } from 'url';
+import { readFile } from 'node:fs/promises';
 
 import { Language, Parser, Query } from 'web-tree-sitter';
 
-const wasmPath = fileURLToPath(import.meta.resolve('tree-sitter-requirements/tree-sitter-requirements.wasm'));
+const wasmUrl = new URL('./tree-sitter-requirements.wasm', import.meta.url);
 
 async function init() {
 	await Parser.init();
-	return await Language.load(wasmPath);
+	const wasmBytes = new Uint8Array(await readFile(wasmUrl));
+	return await Language.load(wasmBytes);
 }
 
 export async function getParser() {
