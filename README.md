@@ -287,8 +287,11 @@ Excluding a package from any analysis can be achieved by marking the package for
   ]
 }
 ```
+</li>
 
-<em>Golang</em> users can add in go.mod a comment with //exhortignore next to the package to be ignored, or to "piggyback" on existing comment ( e.g - //indirect) , for example:
+<li>
+<em>Golang</em> users can add in go.mod a comment with <code>// exhortignore</code> next to the package to be ignored, or to "piggyback" on existing comment ( e.g - <code>// indirect</code>), for example:
+
 ```go
 module github.com/trustify-da/SaaSi/deployer
 
@@ -297,7 +300,7 @@ go 1.19
 require (
         github.com/gin-gonic/gin v1.9.1
         github.com/google/uuid v1.1.2
-        github.com/jessevdk/go-flags v1.5.0 //exhortignore
+        github.com/jessevdk/go-flags v1.5.0 // exhortignore
         github.com/kr/pretty v0.3.1
         gopkg.in/yaml.v2 v2.4.0
         k8s.io/apimachinery v0.26.1
@@ -305,14 +308,20 @@ require (
 )
 
 require (
-        github.com/davecgh/go-spew v1.1.1 // indirect exhortignore
+        github.com/davecgh/go-spew v1.1.1 // indirect; exhortignore
         github.com/emicklei/go-restful/v3 v3.9.0 // indirect
-        github.com/go-logr/logr v1.2.3 // indirect //exhortignore
+        github.com/go-logr/logr v1.2.3 // indirect; exhortignore
 
 )
 ```
 
+<b>NOTE</b>: It is important to format <code>exhortignore</code> markers on indirect dependencies as shown above, otherwise the Go tooling (as well as this library) may incorrectly parse dependencies marked as indirect as being direct dependencies instead.
+</li>
+
+
+<li>
 <em>Python pip</em> users can add in requirements.txt a comment with #exhortignore(or # exhortignore) to the right of the same artifact to be ignored, for example:
+
 ```properties
 anyio==3.6.2
 asgiref==3.4.1
@@ -343,11 +352,14 @@ Werkzeug==2.0.3
 zipp==3.6.0
 
 ```
+</li>
 
+<li>
 <em>Gradle</em> users can add in build.gradle a comment with //exhortignore next to the package to be ignored:
+
 ```build.gradle
 plugins {
-id 'java'
+    id 'java'
 }
 
 group = 'groupName'
@@ -381,7 +393,6 @@ log = "0.4" # trustify-da-ignore
 
 All of the 6 above examples are valid for marking a package to be ignored
 </li>
-
 </ul>
 
 <h3>Customization</h3>

@@ -94,7 +94,7 @@ function addAllDependencies(source, dep, sbom) {
 /**
  *
  * @param {string} manifest - path to requirements.txt
- * @return {PackageURL []}
+ * @return {Promise<PackageURL[]>}
  */
 async function getIgnoredDependencies(manifest) {
 	const [parser, ignoreQuery, pinnedVersionQuery] = await Promise.all([
