@@ -8,6 +8,7 @@ import Javascript_npm from './providers/javascript_npm.js';
 import Javascript_pnpm from './providers/javascript_pnpm.js';
 import Javascript_yarn from './providers/javascript_yarn.js';
 import pythonPipProvider from './providers/python_pip.js'
+import pythonPyprojectProvider from './providers/python_pyproject.js'
 import rustCargoProvider from './providers/rust_cargo.js'
 
 /** @typedef {{ecosystem: string, contentType: string, content: string}} Provided */
@@ -26,6 +27,7 @@ export const availableProviders = [
 	new Javascript_npm(),
 	golangGomodulesProvider,
 	pythonPipProvider,
+	pythonPyprojectProvider,
 	rustCargoProvider]
 
 /**
