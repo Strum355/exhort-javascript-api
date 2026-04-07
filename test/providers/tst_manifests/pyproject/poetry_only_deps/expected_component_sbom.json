@@ -5,11 +5,11 @@
 	"metadata": {
 		"timestamp": "2023-10-01T00:00:00.000Z",
 		"component": {
-			"name": "default-pip-root",
-			"version": "0.0.0",
-			"purl": "pkg:pypi/default-pip-root@0.0.0",
+			"name": "poetry-only-project",
+			"version": "1.0.0",
+			"purl": "pkg:pypi/poetry-only-project@1.0.0",
 			"type": "application",
-			"bom-ref": "pkg:pypi/default-pip-root@0.0.0"
+			"bom-ref": "pkg:pypi/poetry-only-project@1.0.0"
 		}
 	},
 	"components": [
@@ -37,7 +37,7 @@
 	],
 	"dependencies": [
 		{
-			"ref": "pkg:pypi/default-pip-root@0.0.0",
+			"ref": "pkg:pypi/poetry-only-project@1.0.0",
 			"dependsOn": [
 				"pkg:pypi/click@8.1.8",
 				"pkg:pypi/flask@2.3.3",

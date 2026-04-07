@@ -5,11 +5,11 @@
 	"metadata": {
 		"timestamp": "2023-10-01T00:00:00.000Z",
 		"component": {
-			"name": "default-pip-root",
-			"version": "0.0.0",
-			"purl": "pkg:pypi/default-pip-root@0.0.0",
+			"name": "test-project",
+			"version": "1.0.0",
+			"purl": "pkg:pypi/test-project@1.0.0",
 			"type": "application",
-			"bom-ref": "pkg:pypi/default-pip-root@0.0.0"
+			"bom-ref": "pkg:pypi/test-project@1.0.0"
 		}
 	},
 	"components": [
@@ -30,7 +30,7 @@
 	],
 	"dependencies": [
 		{
-			"ref": "pkg:pypi/default-pip-root@0.0.0",
+			"ref": "pkg:pypi/test-project@1.0.0",
 			"dependsOn": [
 				"pkg:pypi/flask@2.0.3",
 				"pkg:pypi/requests@2.25.1"
