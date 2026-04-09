@@ -1,8 +1,31 @@
-import { environmentVariableIsPopulated, getCustomPath, invokeCommand } from '../tools.js'
+import fs from 'node:fs'
+import path from 'node:path'
+
+import { environmentVariableIsPopulated, getCustom, getCustomPath, invokeCommand } from '../tools.js'
 
 import Base_pyproject from './base_pyproject.js'
 
 export default class Python_poetry extends Base_pyproject {
+
+	/**
+	 * Poetry has no native workspace/monorepo support (python-poetry/poetry#2270).
+	 * Each poetry project is treated independently — no lock file walk-up.
+	 * Running `poetry show` from a parent directory returns the parent's deps, not
+	 * the sub-package's, so walk-up would produce incorrect SBOMs.
+	 * @param {string} manifestDir
+	 * @param {Object} [opts={}]
+	 * @returns {string|null}
+	 * @protected
+	 */
+	_findLockFileDir(manifestDir, opts = {}) {
+		const workspaceDir = getCustom('TRUSTIFY_DA_WORKSPACE_DIR', null, opts)
+		if (workspaceDir) {
+			const dir = path.resolve(workspaceDir)
+			return fs.existsSync(path.join(dir, this._lockFileName())) ? dir : null
+		}
+		const dir = path.resolve(manifestDir)
+		return fs.existsSync(path.join(dir, this._lockFileName())) ? dir : null
+	}
 
 	/** @returns {string} */
 	_lockFileName() {
@@ -16,11 +39,13 @@ export default class Python_poetry extends Base_pyproject {
 
 	/**
 	 * @param {string} manifestDir
+	 * @param {string} _workspaceDir - unused (poetry has no workspace support)
 	 * @param {object} parsed - parsed pyproject.toml
 	 * @param {Object} opts
 	 * @returns {Promise<{directDeps: string[], graph: Map<string, {name: string, version: string, children: string[]}>}>}
 	 */
-	async _getDependencyData(manifestDir, parsed, opts) {
+	// eslint-disable-next-line no-unused-vars
+	async _getDependencyData(manifestDir, _workspaceDir, parsed, opts) {
 		let treeOutput = this._getPoetryShowTreeOutput(manifestDir, opts)
 		let showAllOutput = this._getPoetryShowAllOutput(manifestDir, opts)
 		let versionMap = this._parsePoetryShowAll(showAllOutput)
@@ -97,7 +122,7 @@ export default class Python_poetry extends Base_pyproject {
 			if (!line.trim()) { continue }
 
 			// top-level line: "name version description..."
-			let topMatch = line.match(/^([A-Za-z0-9][A-Za-z0-9._-]*)\s+(\S+)\s/)
+			let topMatch = line.match(/^([A-Za-z0-9][A-Za-z0-9._-]*)\s+(\S+)(?:\s|$)/)
 			if (topMatch) {
 				let name = topMatch[1]
 				let version = topMatch[2]

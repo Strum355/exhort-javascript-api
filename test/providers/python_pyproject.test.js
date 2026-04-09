@@ -1,4 +1,5 @@
 import fs from 'fs'
+import path from 'path'
 
 import { expect } from 'chai'
 import { useFakeTimers } from 'sinon'
@@ -194,6 +195,130 @@ suite('testing the python-pyproject data provider', () => {
 		} finally {
 			fs.rmSync(tmpDir, { recursive: true, force: true })
 		}
+	})
+
+	suite('workspace/monorepo support', () => {
+		const uvWorkspace = 'test/providers/tst_manifests/pyproject/uv_workspace'
+
+		test('uv validateLockFile finds uv.lock in parent directory', () => {
+			expect(uvProvider.validateLockFile(
+				path.join(uvWorkspace, 'packages/sub-pkg')
+			)).to.equal(true)
+		})
+
+		test('poetry validateLockFile does not walk up to parent directory', () => {
+			// Poetry has no native workspace support (python-poetry/poetry#2270).
+			// Each poetry project is treated independently — no lock file walk-up.
+			let tmpDir = 'test/providers/tst_manifests/pyproject/boundary_test_poetry'
+			let subDir = path.join(tmpDir, 'packages', 'child')
+			fs.mkdirSync(subDir, { recursive: true })
+			fs.writeFileSync(path.join(tmpDir, 'pyproject.toml'),
+				'[tool.poetry]\nname = "root"\nversion = "0.1.0"\n')
+			fs.writeFileSync(path.join(tmpDir, 'poetry.lock'), '')
+			fs.writeFileSync(path.join(subDir, 'pyproject.toml'),
+				'[tool.poetry]\nname = "child"\nversion = "0.1.0"\n')
+			try {
+				// poetry.lock exists at root but poetry should NOT walk up
+				expect(poetryProvider.validateLockFile(subDir)).to.equal(false)
+			} finally {
+				fs.rmSync(tmpDir, { recursive: true, force: true })
+			}
+		})
+
+		test('validateLockFile stops at uv workspace root boundary when lock file is absent', () => {
+			let tmpDir = 'test/providers/tst_manifests/pyproject/boundary_test'
+			let subDir = path.join(tmpDir, 'packages', 'child')
+			fs.mkdirSync(subDir, { recursive: true })
+			// root has workspace marker but no lock file
+			fs.writeFileSync(path.join(tmpDir, 'pyproject.toml'),
+				'[tool.uv.workspace]\nmembers = ["packages/*"]\n')
+			fs.writeFileSync(path.join(subDir, 'pyproject.toml'),
+				'[project]\nname = "child"\nversion = "0.1.0"\n')
+			try {
+				expect(uvProvider.validateLockFile(subDir)).to.equal(false)
+			} finally {
+				fs.rmSync(tmpDir, { recursive: true, force: true })
+			}
+		})
+
+		test('TRUSTIFY_DA_WORKSPACE_DIR override directs lock file search', () => {
+			let overrideDir = path.resolve(uvWorkspace)
+			expect(uvProvider.validateLockFile(
+				'test/providers/tst_manifests/pyproject/poetry_lock',
+				{ TRUSTIFY_DA_WORKSPACE_DIR: overrideDir }
+			)).to.equal(true)
+
+			expect(uvProvider.validateLockFile(
+				'test/providers/tst_manifests/pyproject/poetry_lock',
+				{ TRUSTIFY_DA_WORKSPACE_DIR: '/nonexistent/dir' }
+			)).to.equal(false)
+		})
+
+		test('verify uv workspace root stack analysis', async () => {
+			let expectedSbom = fs.readFileSync(path.join(uvWorkspace, 'expected_stack_sbom.json')).toString()
+			expectedSbom = JSON.stringify(JSON.parse(expectedSbom))
+			let result = await uvProvider.provideStack(path.join(uvWorkspace, 'pyproject.toml'))
+			expect(result).to.deep.equal({
+				ecosystem: 'pip',
+				contentType: 'application/vnd.cyclonedx+json',
+				content: expectedSbom
+			})
+		}).timeout(TIMEOUT)
+
+		test('verify uv workspace root component analysis', async () => {
+			let expectedSbom = fs.readFileSync(path.join(uvWorkspace, 'expected_component_sbom.json')).toString().trim()
+			expectedSbom = JSON.stringify(JSON.parse(expectedSbom))
+			let result = await uvProvider.provideComponent(path.join(uvWorkspace, 'pyproject.toml'))
+			expect(result).to.deep.equal({
+				ecosystem: 'pip',
+				contentType: 'application/vnd.cyclonedx+json',
+				content: expectedSbom
+			})
+		}).timeout(TIMEOUT)
+
+		test('verify uv workspace mid-package stack analysis', async () => {
+			let expectedSbom = fs.readFileSync(path.join(uvWorkspace, 'packages/mid-pkg/expected_stack_sbom.json')).toString()
+			expectedSbom = JSON.stringify(JSON.parse(expectedSbom))
+			let result = await uvProvider.provideStack(path.join(uvWorkspace, 'packages/mid-pkg/pyproject.toml'))
+			expect(result).to.deep.equal({
+				ecosystem: 'pip',
+				contentType: 'application/vnd.cyclonedx+json',
+				content: expectedSbom
+			})
+		}).timeout(TIMEOUT)
+
+		test('verify uv workspace mid-package component analysis', async () => {
+			let expectedSbom = fs.readFileSync(path.join(uvWorkspace, 'packages/mid-pkg/expected_component_sbom.json')).toString().trim()
+			expectedSbom = JSON.stringify(JSON.parse(expectedSbom))
+			let result = await uvProvider.provideComponent(path.join(uvWorkspace, 'packages/mid-pkg/pyproject.toml'))
+			expect(result).to.deep.equal({
+				ecosystem: 'pip',
+				contentType: 'application/vnd.cyclonedx+json',
+				content: expectedSbom
+			})
+		}).timeout(TIMEOUT)
+
+		test('verify uv workspace sub-package stack analysis', async () => {
+			let expectedSbom = fs.readFileSync(path.join(uvWorkspace, 'packages/sub-pkg/expected_stack_sbom.json')).toString()
+			expectedSbom = JSON.stringify(JSON.parse(expectedSbom))
+			let result = await uvProvider.provideStack(path.join(uvWorkspace, 'packages/sub-pkg/pyproject.toml'))
+			expect(result).to.deep.equal({
+				ecosystem: 'pip',
+				contentType: 'application/vnd.cyclonedx+json',
+				content: expectedSbom
+			})
+		}).timeout(TIMEOUT)
+
+		test('verify uv workspace sub-package component analysis', async () => {
+			let expectedSbom = fs.readFileSync(path.join(uvWorkspace, 'packages/sub-pkg/expected_component_sbom.json')).toString().trim()
+			expectedSbom = JSON.stringify(JSON.parse(expectedSbom))
+			let result = await uvProvider.provideComponent(path.join(uvWorkspace, 'packages/sub-pkg/pyproject.toml'))
+			expect(result).to.deep.equal({
+				ecosystem: 'pip',
+				contentType: 'application/vnd.cyclonedx+json',
+				content: expectedSbom
+			})
+		}).timeout(TIMEOUT)
 	})
 
 }).beforeAll(() => clock = useFakeTimers(new Date('2023-10-01T00:00:00.000Z'))).afterAll(() => clock.restore())
