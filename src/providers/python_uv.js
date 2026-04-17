@@ -44,7 +44,7 @@ export default class Python_uv extends Base_pyproject {
 			return Buffer.from(process.env['TRUSTIFY_DA_UV_EXPORT'], 'base64').toString('ascii')
 		}
 		let uvBin = getCustomPath('uv', opts)
-		return invokeCommand(uvBin, ['export', '--format', 'requirements.txt', '--frozen', '--no-hashes'], { cwd: manifestDir }).toString()
+		return invokeCommand(uvBin, ['export', '--format', 'requirements.txt', '--frozen', '--no-hashes', '--no-dev'], { cwd: manifestDir }).toString()
 	}
 
 	/**

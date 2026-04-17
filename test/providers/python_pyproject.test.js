@@ -94,6 +94,30 @@ suite('testing the python-pyproject data provider', () => {
 		}).timeout(TIMEOUT)
 	})
 
+	suite('uv projects - dev dependencies excluded (TC-4096)', () => {
+		test('dev dependencies excluded from stack analysis', async () => {
+			let expectedSbom = fs.readFileSync('test/providers/tst_manifests/pyproject/uv_dev_deps/expected_stack_sbom.json').toString()
+			expectedSbom = JSON.stringify(JSON.parse(expectedSbom))
+			let result = await uvProvider.provideStack('test/providers/tst_manifests/pyproject/uv_dev_deps/pyproject.toml')
+			expect(result).to.deep.equal({
+				ecosystem: 'pip',
+				contentType: 'application/vnd.cyclonedx+json',
+				content: expectedSbom
+			})
+		}).timeout(TIMEOUT)
+
+		test('dev dependencies excluded from component analysis', async () => {
+			let expectedSbom = fs.readFileSync('test/providers/tst_manifests/pyproject/uv_dev_deps/expected_component_sbom.json').toString().trim()
+			expectedSbom = JSON.stringify(JSON.parse(expectedSbom))
+			let result = await uvProvider.provideComponent('test/providers/tst_manifests/pyproject/uv_dev_deps/pyproject.toml')
+			expect(result).to.deep.equal({
+				ecosystem: 'pip',
+				contentType: 'application/vnd.cyclonedx+json',
+				content: expectedSbom
+			})
+		}).timeout(TIMEOUT)
+	})
+
 	suite('uv projects - uv_lock manifest', () => {
 		test('verify pyproject.toml sbom provided for stack analysis with uv_lock', async () => {
 			let expectedSbom = fs.readFileSync('test/providers/tst_manifests/pyproject/uv_lock/expected_stack_sbom.json').toString()
