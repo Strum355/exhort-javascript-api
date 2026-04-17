@@ -1,0 +1,12 @@
+[tool.poetry]
+name = "legacy-dev-deps-project"
+version = "1.0.0"
+description = "Fixture for TC-4096: legacy dev dependencies must be excluded"
+package-mode = false
+
+[tool.poetry.dependencies]
+python = "^3.11"
+requests = "^2.31.0"
+
+[tool.poetry.dev-dependencies]
+black = "22.10.0"

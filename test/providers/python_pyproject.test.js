@@ -160,6 +160,54 @@ suite('testing the python-pyproject data provider', () => {
 		}).timeout(TIMEOUT)
 	})
 
+	suite('poetry projects - modern dev dependencies excluded (TC-4096)', () => {
+		test('dev dependencies excluded from stack analysis', async () => {
+			let expectedSbom = fs.readFileSync('test/providers/tst_manifests/pyproject/poetry_dev_deps/expected_stack_sbom.json').toString()
+			expectedSbom = JSON.stringify(JSON.parse(expectedSbom))
+			let result = await poetryProvider.provideStack('test/providers/tst_manifests/pyproject/poetry_dev_deps/pyproject.toml')
+			expect(result).to.deep.equal({
+				ecosystem: 'pip',
+				contentType: 'application/vnd.cyclonedx+json',
+				content: expectedSbom
+			})
+		}).timeout(TIMEOUT)
+
+		test('dev dependencies excluded from component analysis', async () => {
+			let expectedSbom = fs.readFileSync('test/providers/tst_manifests/pyproject/poetry_dev_deps/expected_component_sbom.json').toString().trim()
+			expectedSbom = JSON.stringify(JSON.parse(expectedSbom))
+			let result = await poetryProvider.provideComponent('test/providers/tst_manifests/pyproject/poetry_dev_deps/pyproject.toml')
+			expect(result).to.deep.equal({
+				ecosystem: 'pip',
+				contentType: 'application/vnd.cyclonedx+json',
+				content: expectedSbom
+			})
+		}).timeout(TIMEOUT)
+	})
+
+	suite('poetry projects - legacy dev-dependencies excluded (TC-4096)', () => {
+		test('legacy dev dependencies excluded from stack analysis', async () => {
+			let expectedSbom = fs.readFileSync('test/providers/tst_manifests/pyproject/poetry_legacy_dev_deps/expected_stack_sbom.json').toString()
+			expectedSbom = JSON.stringify(JSON.parse(expectedSbom))
+			let result = await poetryProvider.provideStack('test/providers/tst_manifests/pyproject/poetry_legacy_dev_deps/pyproject.toml')
+			expect(result).to.deep.equal({
+				ecosystem: 'pip',
+				contentType: 'application/vnd.cyclonedx+json',
+				content: expectedSbom
+			})
+		}).timeout(TIMEOUT)
+
+		test('legacy dev dependencies excluded from component analysis', async () => {
+			let expectedSbom = fs.readFileSync('test/providers/tst_manifests/pyproject/poetry_legacy_dev_deps/expected_component_sbom.json').toString().trim()
+			expectedSbom = JSON.stringify(JSON.parse(expectedSbom))
+			let result = await poetryProvider.provideComponent('test/providers/tst_manifests/pyproject/poetry_legacy_dev_deps/pyproject.toml')
+			expect(result).to.deep.equal({
+				ecosystem: 'pip',
+				contentType: 'application/vnd.cyclonedx+json',
+				content: expectedSbom
+			})
+		}).timeout(TIMEOUT)
+	})
+
 	suite('poetry projects - poetry_only_deps manifest', () => {
 		test('verify pyproject.toml sbom provided for stack analysis with poetry_only_deps', async () => {
 			let expectedSbom = fs.readFileSync('test/providers/tst_manifests/pyproject/poetry_only_deps/expected_stack_sbom.json').toString()

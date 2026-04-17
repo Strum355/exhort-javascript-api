@@ -46,7 +46,8 @@ export default class Python_poetry extends Base_pyproject {
 	 */
 	// eslint-disable-next-line no-unused-vars
 	async _getDependencyData(manifestDir, _workspaceDir, parsed, opts) {
-		let treeOutput = this._getPoetryShowTreeOutput(manifestDir, opts)
+		let hasDevGroup = !!(parsed.tool?.poetry?.group?.dev || parsed.tool?.poetry?.['dev-dependencies'])
+		let treeOutput = this._getPoetryShowTreeOutput(manifestDir, hasDevGroup, opts)
 		let showAllOutput = this._getPoetryShowAllOutput(manifestDir, opts)
 		let versionMap = this._parsePoetryShowAll(showAllOutput)
 		return this._parsePoetryTree(treeOutput, versionMap)
@@ -55,15 +56,20 @@ export default class Python_poetry extends Base_pyproject {
 	/**
 	 * Get poetry show --tree output.
 	 * @param {string} manifestDir
+	 * @param {boolean} hasDevGroup
 	 * @param {Object} opts
 	 * @returns {string}
 	 */
-	_getPoetryShowTreeOutput(manifestDir, opts) {
+	_getPoetryShowTreeOutput(manifestDir, hasDevGroup, opts) {
 		if (environmentVariableIsPopulated('TRUSTIFY_DA_POETRY_SHOW_TREE')) {
 			return Buffer.from(process.env['TRUSTIFY_DA_POETRY_SHOW_TREE'], 'base64').toString('utf-8')
 		}
 		let poetryBin = getCustomPath('poetry', opts)
-		return invokeCommand(poetryBin, ['show', '--tree', '--no-ansi'], { cwd: manifestDir }).toString()
+		let args = ['show', '--tree', '--no-ansi']
+		if (hasDevGroup) {
+			args.push('--without', 'dev')
+		}
+		return invokeCommand(poetryBin, args, { cwd: manifestDir }).toString()
 	}
 
 	/**
