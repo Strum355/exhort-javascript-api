@@ -21,7 +21,8 @@ export default class Javascript_pnpm extends Base_javascript {
 	_buildDependencyTree(includeTransitive, opts = {}) {
 		const tree = super._buildDependencyTree(includeTransitive, opts);
 		if (Array.isArray(tree) && tree.length > 0) {
-			return tree[0];
+			const memberName = this._getManifest().name;
+			return tree.find(pkg => pkg.name === memberName) || tree[0];
 		}
 		return {};
 	}
