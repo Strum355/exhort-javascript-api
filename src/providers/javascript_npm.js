@@ -17,4 +17,22 @@ export default class Javascript_npm extends Base_javascript {
 	_updateLockFileCmdArgs() {
 		return ['install', '--package-lock-only'];
 	}
+
+	_buildDependencyTree(includeTransitive, opts = {}) {
+		const tree = super._buildDependencyTree(includeTransitive, opts);
+		const memberName = this._getManifest().name;
+		if (tree.name === memberName) {
+			return tree;
+		}
+		const memberEntry = tree.dependencies?.[memberName];
+		if (memberEntry) {
+			return {
+				name: memberName,
+				version: memberEntry.version || this._getManifest().version,
+				dependencies: memberEntry.dependencies,
+				optionalDependencies: memberEntry.optionalDependencies,
+			};
+		}
+		return tree;
+	}
 }
