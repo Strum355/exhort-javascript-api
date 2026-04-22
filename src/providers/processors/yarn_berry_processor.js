@@ -20,7 +20,10 @@ export default class Yarn_berry_processor extends Yarn_processor {
 	 * @returns {string[]} Command arguments for listing dependencies
 	 */
 	listCmdArgs(includeTransitive) {
-		return ['info', includeTransitive ? '--recursive' : '--all', '--json'];
+		// --all is needed to include workspace members in the output
+		return includeTransitive
+			? ['info', '--recursive', '--all', '--json']
+			: ['info', '--all', '--json'];
 	}
 
 	/**

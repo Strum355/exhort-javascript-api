@@ -22,10 +22,10 @@
 		},
 		{
 			"name": "follow-redirects",
-			"version": "1.15.6",
-			"purl": "pkg:npm/follow-redirects@1.15.6",
+			"version": "1.16.0",
+			"purl": "pkg:npm/follow-redirects@1.16.0",
 			"type": "library",
-			"bom-ref": "pkg:npm/follow-redirects@1.15.6"
+			"bom-ref": "pkg:npm/follow-redirects@1.16.0"
 		}
 	],
 	"dependencies": [
@@ -38,11 +38,11 @@
 		{
 			"ref": "pkg:npm/axios@0.21.1",
 			"dependsOn": [
-				"pkg:npm/follow-redirects@1.15.6"
+				"pkg:npm/follow-redirects@1.16.0"
 			]
 		},
 		{
-			"ref": "pkg:npm/follow-redirects@1.15.6",
+			"ref": "pkg:npm/follow-redirects@1.16.0",
 			"dependsOn": []
 		}
 	]
