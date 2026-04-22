@@ -1,0 +1,24 @@
+{
+  "value": "axios@npm:0.21.1",
+  "children": {
+    "Version": "0.21.1"
+  }
+}
+{
+  "value": "follow-redirects@npm:1.15.6",
+  "children": {
+    "Version": "1.15.6"
+  }
+}
+{
+  "value": "test-workspace-root@workspace:.",
+  "children": {
+    "Version": "0.0.0"
+  }
+}
+{
+  "value": "member-a@workspace:packages/member-a",
+  "children": {
+    "Version": "1.0.0"
+  }
+}

@@ -80,7 +80,7 @@ export default class Yarn_berry_processor extends Yarn_processor {
 		if (!name) {
 			return false;
 		}
-		return name.endsWith("@workspace:.");
+		return name.startsWith(`${this._manifest.name}@workspace:`);
 	}
 
 	/**
