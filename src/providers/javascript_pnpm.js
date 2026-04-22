@@ -11,7 +11,7 @@ export default class Javascript_pnpm extends Base_javascript {
 	}
 
 	_listCmdArgs(includeTransitive) {
-		return ['ls', includeTransitive ? '--depth=Infinity' : '--depth=0', '--prod', '--json'];
+		return ['ls', includeTransitive ? '--depth=Infinity' : '--depth=0', '--prod', '--json', '-r'];
 	}
 
 	_updateLockFileCmdArgs() {
