@@ -1,10 +1,10 @@
 {
   "name": "test-workspace-root",
-  "version": "1.0.0",
   "dependencies": {
     "member-a": {
       "version": "1.0.0",
-      "resolved": "file:packages/member-a",
+      "resolved": "file:../packages/member-a",
+      "overridden": false,
       "dependencies": {
         "axios": {
           "version": "0.21.1",
