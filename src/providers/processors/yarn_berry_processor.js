@@ -80,6 +80,7 @@ export default class Yarn_berry_processor extends Yarn_processor {
 		if (!name) {
 			return false;
 		}
+		// Workspace members use paths like "member-a@workspace:packages/member-a", not just "@workspace:."
 		return name.startsWith(`${this._manifest.name}@workspace:`);
 	}
 
