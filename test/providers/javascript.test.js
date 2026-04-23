@@ -109,6 +109,58 @@ suite('testing the javascript-npm data provider', async () => {
 	[
 		{ providerName: 'pnpm', testCase: 'workspace_member' },
 	].forEach(({ providerName, testCase }) => {
+		test(`verify workspace member data for ${providerName} - stack analysis`, async () => {
+			let expectedSbom = fs.readFileSync(`test/providers/tst_manifests/${providerName}/${testCase}/stack_expected_sbom.json`).toString();
+			let listing = fs.readFileSync(`test/providers/tst_manifests/${providerName}/${testCase}/listing_stack.json`).toString();
+
+			const provider = await createMockProvider(providerName, listing);
+			const manifestPath = `test/providers/tst_manifests/${providerName}/${testCase}/packages/member-a/package.json`;
+			let providedDataForStack = provider.provideStack(manifestPath);
+
+			compareSboms(providedDataForStack.content, expectedSbom);
+		}).timeout(30000);
+
+		test(`verify workspace member data for ${providerName} - component analysis`, async () => {
+			let expectedSbom = fs.readFileSync(`test/providers/tst_manifests/${providerName}/${testCase}/component_expected_sbom.json`).toString();
+			let listing = fs.readFileSync(`test/providers/tst_manifests/${providerName}/${testCase}/listing_component.json`).toString();
+
+			const provider = await createMockProvider(providerName, listing);
+			const manifestPath = `test/providers/tst_manifests/${providerName}/${testCase}/packages/member-a/package.json`;
+			let providedDataForComponent = provider.provideComponent(manifestPath);
+
+			compareSboms(providedDataForComponent.content, expectedSbom);
+		}).timeout(15000);
+	});
+
+	[
+		{ providerName: 'yarn-berry', testCase: 'workspace_member' },
+	].forEach(({ providerName, testCase }) => {
+		test(`verify workspace member data for ${providerName} - stack analysis`, async () => {
+			let expectedSbom = fs.readFileSync(`test/providers/tst_manifests/${providerName}/${testCase}/stack_expected_sbom.json`).toString();
+			let listing = fs.readFileSync(`test/providers/tst_manifests/${providerName}/${testCase}/listing_stack.json`).toString();
+
+			const provider = await createMockProvider(providerName, listing);
+			const manifestPath = `test/providers/tst_manifests/${providerName}/${testCase}/packages/member-a/package.json`;
+			let providedDataForStack = provider.provideStack(manifestPath);
+
+			compareSboms(providedDataForStack.content, expectedSbom);
+		}).timeout(30000);
+
+		test(`verify workspace member data for ${providerName} - component analysis`, async () => {
+			let expectedSbom = fs.readFileSync(`test/providers/tst_manifests/${providerName}/${testCase}/component_expected_sbom.json`).toString();
+			let listing = fs.readFileSync(`test/providers/tst_manifests/${providerName}/${testCase}/listing_component.json`).toString();
+
+			const provider = await createMockProvider(providerName, listing);
+			const manifestPath = `test/providers/tst_manifests/${providerName}/${testCase}/packages/member-a/package.json`;
+			let providedDataForComponent = provider.provideComponent(manifestPath);
+
+			compareSboms(providedDataForComponent.content, expectedSbom);
+		}).timeout(15000);
+	});
+
+	[
+		{ providerName: 'npm', testCase: 'workspace_member' },
+	].forEach(({ providerName, testCase }) => {
 		/// Verifies that stack analysis resolves transitive dependencies for a workspace member.
 		test(`verify workspace member data provided for ${providerName} - stack analysis`, async () => {
 			// Given a workspace member manifest and mock listing from the workspace root

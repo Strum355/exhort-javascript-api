@@ -20,7 +20,10 @@ export default class Yarn_berry_processor extends Yarn_processor {
 	 * @returns {string[]} Command arguments for listing dependencies
 	 */
 	listCmdArgs(includeTransitive) {
-		return ['info', includeTransitive ? '--recursive' : '--all', '--json'];
+		// --all is needed to include workspace members in the output
+		return includeTransitive
+			? ['info', '--recursive', '--all', '--json']
+			: ['info', '--all', '--json'];
 	}
 
 	/**
@@ -80,7 +83,8 @@ export default class Yarn_berry_processor extends Yarn_processor {
 		if (!name) {
 			return false;
 		}
-		return name.endsWith("@workspace:.");
+		// Workspace members use paths like "member-a@workspace:packages/member-a", not just "@workspace:."
+		return name.startsWith(`${this._manifest.name}@workspace:`);
 	}
 
 	/**

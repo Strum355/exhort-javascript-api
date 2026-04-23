@@ -1,0 +1,30 @@
+{
+  "value": "axios@npm:0.21.1",
+  "children": {
+    "Version": "0.21.1",
+    "Dependencies": [
+      {
+        "descriptor": "follow-redirects@virtual:d192f6b3b31cd5d11a443145a3883a70c04cbd7c813c53085dbaf50263735f1162f10fdbddd53c24e162ec3bc37b90966413084323739b7cf942b8bfb4da8831#npm:^1.10.0",
+        "locator": "follow-redirects@virtual:d192f6b3b31cd5d11a443145a3883a70c04cbd7c813c53085dbaf50263735f1162f10fdbddd53c24e162ec3bc37b90966413084323739b7cf942b8bfb4da8831#npm:1.16.0"
+      }
+    ]
+  }
+}
+{
+  "value": "member-a@workspace:packages/member-a",
+  "children": {
+    "Version": "1.0.0",
+    "Dependencies": [
+      {
+        "descriptor": "axios@npm:0.21.1",
+        "locator": "axios@npm:0.21.1"
+      }
+    ]
+  }
+}
+{
+  "value": "test-workspace-root@workspace:.",
+  "children": {
+    "Version": "0.0.0"
+  }
+}
