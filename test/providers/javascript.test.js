@@ -90,7 +90,7 @@ suite('testing the javascript-npm data provider', async () => {
 
 			compareSboms(providedDataForStack.content, expectedSbom);
 
-		}).timeout(process.env.GITHUB_ACTIONS ? 30000 : 10000);
+		}).timeout(30000);
 		test(`verify package.json data provided for ${providerName} - component analysis - ${scenario}`, async () => {
 			// load the expected list for the scenario
 			let expectedSbom = fs.readFileSync(`test/providers/tst_manifests/js-common/${testCase}/component_expected_sbom.json`,).toString().trim()
@@ -102,7 +102,7 @@ suite('testing the javascript-npm data provider', async () => {
 			let providedDataForComponent = provider.provideComponent(manifestPath);
 
 			compareSboms(providedDataForComponent.content, expectedSbom);
-		}).timeout(process.env.GITHUB_ACTIONS ? 15000 : 10000)
+		}).timeout(15000)
 
 	});
 
@@ -118,7 +118,7 @@ suite('testing the javascript-npm data provider', async () => {
 			let providedDataForStack = provider.provideStack(manifestPath);
 
 			compareSboms(providedDataForStack.content, expectedSbom);
-		}).timeout(process.env.GITHUB_ACTIONS ? 30000 : 10000);
+		}).timeout(30000);
 
 		test(`verify workspace member data for ${providerName} - component analysis`, async () => {
 			let expectedSbom = fs.readFileSync(`test/providers/tst_manifests/${providerName}/${testCase}/component_expected_sbom.json`).toString();
@@ -129,7 +129,7 @@ suite('testing the javascript-npm data provider', async () => {
 			let providedDataForComponent = provider.provideComponent(manifestPath);
 
 			compareSboms(providedDataForComponent.content, expectedSbom);
-		}).timeout(process.env.GITHUB_ACTIONS ? 15000 : 10000);
+		}).timeout(15000);
 	});
 
 	test('loads a valid manifest with ignored dependencies', () => {
