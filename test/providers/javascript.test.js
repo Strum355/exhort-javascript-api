@@ -90,7 +90,7 @@ suite('testing the javascript-npm data provider', async () => {
 
 			compareSboms(providedDataForStack.content, expectedSbom);
 
-		}).timeout(process.env.GITHUB_ACTIONS ? 30000 : 10000);
+		}).timeout(30000);
 		test(`verify package.json data provided for ${providerName} - component analysis - ${scenario}`, async () => {
 			// load the expected list for the scenario
 			let expectedSbom = fs.readFileSync(`test/providers/tst_manifests/js-common/${testCase}/component_expected_sbom.json`,).toString().trim()
@@ -102,7 +102,7 @@ suite('testing the javascript-npm data provider', async () => {
 			let providedDataForComponent = provider.provideComponent(manifestPath);
 
 			compareSboms(providedDataForComponent.content, expectedSbom);
-		}).timeout(process.env.GITHUB_ACTIONS ? 15000 : 10000)
+		}).timeout(15000)
 
 	});
 
@@ -122,7 +122,7 @@ suite('testing the javascript-npm data provider', async () => {
 
 			// Then the SBOM should contain the member's transitive dependencies
 			compareSboms(result.content, expectedSbom);
-		}).timeout(process.env.GITHUB_ACTIONS ? 30000 : 10000);
+		}).timeout(30000);
 
 		/// Verifies that component analysis resolves direct dependencies for a workspace member.
 		test(`verify workspace member data provided for ${providerName} - component analysis`, async () => {
@@ -137,7 +137,7 @@ suite('testing the javascript-npm data provider', async () => {
 
 			// Then the SBOM should contain only the member's direct dependencies
 			compareSboms(result.content, expectedSbom);
-		}).timeout(process.env.GITHUB_ACTIONS ? 15000 : 10000);
+		}).timeout(15000);
 	});
 
 	test('loads a valid manifest with ignored dependencies', () => {
