@@ -5,6 +5,7 @@ import { expect } from 'chai'
 import esmock from 'esmock'
 
 import {
+	discoverMavenModules,
 	discoverWorkspaceCrates,
 	discoverWorkspacePackages,
 	filterManifestPathsByDiscoveryIgnore,
@@ -185,5 +186,128 @@ suite('discoverWorkspaceCrates', () => {
 		expect(result.every(p => p.endsWith('Cargo.toml'))).to.be.true
 		expect(result.some(p => p.includes('crate-a'))).to.be.true
 		expect(result.some(p => p.includes('crate-b'))).to.be.true
+	})
+})
+
+suite('discoverMavenModules', () => {
+	test('returns empty when no pom.xml at root', async () => {
+		const result = await discoverMavenModules('test/providers/tst_manifests/npm')
+		expect(result).to.be.an('array')
+		expect(result).to.have.lengthOf(0)
+	})
+
+	test('returns root pom only when mvn reports no modules', async () => {
+		const root = path.resolve('test/providers/tst_manifests/maven/maven_no_modules')
+		const { discoverMavenModules } = await esmock('../../src/workspace.js', {
+			'../../src/tools.js': {
+				getCustom: () => null,
+				getCustomPath: () => 'mvn',
+				getGitRootDir: () => null,
+				getWrapperPreference: () => false,
+				invokeCommand: () => Buffer.from('null'),
+			},
+		})
+		const result = await discoverMavenModules(root)
+		expect(result).to.be.an('array')
+		expect(result).to.have.lengthOf(1)
+		expect(result[0]).to.equal(path.join(root, 'pom.xml'))
+	})
+
+	test('discovers multi-module project', async () => {
+		const root = path.resolve('test/providers/tst_manifests/maven/maven_multi_module')
+		const { discoverMavenModules } = await esmock('../../src/workspace.js', {
+			'../../src/tools.js': {
+				getCustom: () => null,
+				getCustomPath: () => 'mvn',
+				getGitRootDir: () => null,
+				getWrapperPreference: () => false,
+				invokeCommand: (bin, args) => {
+					const pomArg = args.find((a, i) => args[i - 1] === '-f')
+					if (pomArg && pomArg.includes('module-a')) {
+						return Buffer.from('null')
+					}
+					if (pomArg && pomArg.includes('module-b')) {
+						return Buffer.from('null')
+					}
+					return Buffer.from('[module-a, module-b]')
+				},
+			},
+		})
+		const result = await discoverMavenModules(root)
+		expect(result).to.be.an('array')
+		expect(result).to.have.lengthOf(3)
+		expect(result.every(p => p.endsWith('pom.xml'))).to.be.true
+		expect(result[0]).to.equal(path.join(root, 'pom.xml'))
+		expect(result.some(p => p.includes('module-a'))).to.be.true
+		expect(result.some(p => p.includes('module-b'))).to.be.true
+	})
+
+	test('discovers nested aggregator modules recursively', async () => {
+		const root = path.resolve('test/providers/tst_manifests/maven/maven_nested_aggregator')
+		const { discoverMavenModules } = await esmock('../../src/workspace.js', {
+			'../../src/tools.js': {
+				getCustom: () => null,
+				getCustomPath: () => 'mvn',
+				getGitRootDir: () => null,
+				getWrapperPreference: () => false,
+				invokeCommand: (bin, args) => {
+					const pomArg = args.find((a, i) => args[i - 1] === '-f')
+					if (pomArg && pomArg.endsWith(path.join('parent', 'child', 'pom.xml'))) {
+						return Buffer.from('null')
+					}
+					if (pomArg && pomArg.endsWith(path.join('parent', 'pom.xml'))) {
+						return Buffer.from('[child]')
+					}
+					return Buffer.from('[parent]')
+				},
+			},
+		})
+		const result = await discoverMavenModules(root)
+		expect(result).to.be.an('array')
+		expect(result).to.have.lengthOf(3)
+		expect(result[0]).to.equal(path.join(root, 'pom.xml'))
+		expect(result.some(p => p.includes(path.join('parent', 'pom.xml')))).to.be.true
+		expect(result.some(p => p.includes(path.join('parent', 'child', 'pom.xml')))).to.be.true
+	})
+
+	test('returns root pom when mvn command fails', async () => {
+		const root = path.resolve('test/providers/tst_manifests/maven/maven_multi_module')
+		const { discoverMavenModules } = await esmock('../../src/workspace.js', {
+			'../../src/tools.js': {
+				getCustom: () => null,
+				getCustomPath: () => 'mvn',
+				getGitRootDir: () => null,
+				getWrapperPreference: () => false,
+				invokeCommand: () => { throw new Error('mvn not found') },
+			},
+		})
+		const result = await discoverMavenModules(root)
+		expect(result).to.be.an('array')
+		expect(result).to.have.lengthOf(1)
+		expect(result[0]).to.equal(path.join(root, 'pom.xml'))
+	})
+
+	test('excludes paths matching workspaceDiscoveryIgnore', async () => {
+		const root = path.resolve('test/providers/tst_manifests/maven/maven_multi_module')
+		const { discoverMavenModules } = await esmock('../../src/workspace.js', {
+			'../../src/tools.js': {
+				getCustom: () => null,
+				getCustomPath: () => 'mvn',
+				getGitRootDir: () => null,
+				getWrapperPreference: () => false,
+				invokeCommand: (bin, args) => {
+					const pomArg = args.find((a, i) => args[i - 1] === '-f')
+					if (pomArg && (pomArg.includes('module-a') || pomArg.includes('module-b'))) {
+						return Buffer.from('null')
+					}
+					return Buffer.from('[module-a, module-b]')
+				},
+			},
+		})
+		const result = await discoverMavenModules(root, {
+			workspaceDiscoveryIgnore: ['**/module-b/**'],
+		})
+		expect(result.some(p => p.includes('module-a'))).to.be.true
+		expect(result.some(p => p.includes('module-b'))).to.be.false
 	})
 })
