@@ -8,6 +8,7 @@ import fs from 'node:fs'
 import { getCustom } from "./tools.js";
 import { resolveBatchMetadata, resolveContinueOnError } from './batch_opts.js'
 import {
+	discoverMavenModules,
 	discoverWorkspaceCrates,
 	discoverWorkspacePackages,
 	filterManifestPathsByDiscoveryIgnore,
@@ -23,6 +24,7 @@ export { getProjectLicense, findLicenseFilePath, identifyLicense, getLicenseDeta
 
 export default { componentAnalysis, stackAnalysis, stackAnalysisBatch, imageAnalysis, validateToken, generateSbom }
 export {
+	discoverMavenModules,
 	discoverWorkspacePackages,
 	discoverWorkspaceCrates,
 	validatePackageJson,
@@ -319,16 +321,24 @@ async function generateOneSbom(manifestPath, workspaceOpts) {
  *
  * @param {string} root - Resolved workspace root
  * @param {Options} opts
- * @returns {Promise<{ ecosystem: 'javascript' | 'cargo' | 'unknown', manifestPaths: string[] }>}
+ * @returns {Promise<{ ecosystem: 'javascript' | 'cargo' | 'maven' | 'unknown', manifestPaths: string[] }>}
  * @private
  */
 async function detectWorkspaceManifests(root, opts) {
 	const cargoToml = path.join(root, 'Cargo.toml')
 	const cargoLock = path.join(root, 'Cargo.lock')
 	const packageJson = path.join(root, 'package.json')
+	const pomXml = path.join(root, 'pom.xml')
 
 	if (fs.existsSync(cargoToml) && fs.existsSync(cargoLock)) {
 		return { ecosystem: 'cargo', manifestPaths: await discoverWorkspaceCrates(root, opts) }
+	}
+
+	if (fs.existsSync(pomXml)) {
+		const manifestPaths = await discoverMavenModules(root, opts)
+		if (manifestPaths.length > 0) {
+			return { ecosystem: 'maven', manifestPaths }
+		}
 	}
 
 	const hasJsLock = fs.existsSync(path.join(root, 'pnpm-lock.yaml'))

@@ -5,12 +5,13 @@ import fg from 'fast-glob'
 import { load as yamlLoad } from 'js-yaml'
 import micromatch from 'micromatch'
 
-import { getCustom, getCustomPath, invokeCommand } from './tools.js'
+import { getCustom, getCustomPath, getGitRootDir, getWrapperPreference, invokeCommand } from './tools.js'
 
 /** Default paths skipped during JS workspace discovery (merged with user patterns). */
 const DEFAULT_WORKSPACE_DISCOVERY_IGNORE = [
 	'**/node_modules/**',
 	'**/.git/**',
+	'**/target/**',
 ]
 
 /**
@@ -222,6 +223,157 @@ async function discoverFromPackageJsonWorkspaces(root, packageJsonPath, globOpts
 		manifestPaths.unshift(rootPkg)
 	}
 	return filterManifestPathsByDiscoveryIgnore(manifestPaths, root, ignorePatterns)
+}
+
+/**
+ * Resolve the Maven binary, respecting wrapper preference.
+ *
+ * When `TRUSTIFY_DA_PREFER_MVNW` is truthy, traverses from `startDir` up to the
+ * git root (or filesystem root) looking for an executable `mvnw` wrapper.
+ * Falls back to the global `mvn` binary (or `TRUSTIFY_DA_MVN_PATH`).
+ *
+ * @param {string} startDir - Directory from which to start the wrapper search
+ * @param {import('./index.js').Options} [opts={}]
+ * @returns {string} Path to the Maven binary
+ */
+function resolveMavenBinary(startDir, opts = {}) {
+	const localWrapper = 'mvnw' + (process.platform === 'win32' ? '.cmd' : '')
+	const useWrapper = getWrapperPreference('mvn', opts)
+	if (useWrapper) {
+		const wrapper = traverseForWrapper(startDir, localWrapper)
+		if (wrapper !== undefined) {
+			return wrapper
+		}
+	}
+	return getCustomPath('mvn', opts)
+}
+
+/**
+ * Walk up from `startDir` to `repoRoot` looking for an executable wrapper script.
+ *
+ * @param {string} startDir - Absolute directory to start from
+ * @param {string} wrapperName - Wrapper filename (e.g. `mvnw`)
+ * @param {string} [repoRoot] - Stop boundary (defaults to git root or filesystem root)
+ * @returns {string | undefined}
+ */
+function traverseForWrapper(startDir, wrapperName, repoRoot = undefined) {
+	const currentDir = path.resolve(startDir)
+	repoRoot = repoRoot || getGitRootDir(currentDir) || path.parse(currentDir).root
+	const wrapperPath = path.join(currentDir, wrapperName)
+
+	try {
+		fs.accessSync(wrapperPath, fs.constants.X_OK)
+		return wrapperPath
+	} catch (err) {
+		if (err.code === 'ENOENT') {
+			const rootDir = path.parse(currentDir).root
+			if (currentDir === repoRoot || currentDir === rootDir) {
+				return undefined
+			}
+			const parentDir = path.dirname(currentDir)
+			if (parentDir === currentDir || parentDir === rootDir) {
+				return undefined
+			}
+			return traverseForWrapper(parentDir, wrapperName, repoRoot)
+		}
+		throw new Error(`failure searching for ${wrapperName}`, { cause: err })
+	}
+}
+
+/**
+ * Discover all pom.xml manifest paths in a Maven multi-module project.
+ * Uses `mvn help:evaluate` to read `project.modules`, then recurses into
+ * nested aggregator modules.
+ *
+ * @param {string} workspaceRoot - Absolute or relative path to workspace root (must contain pom.xml)
+ * @param {import('./index.js').Options} [opts={}]
+ * @returns {Promise<string[]>} Paths to pom.xml files (absolute)
+ */
+export async function discoverMavenModules(workspaceRoot, opts = {}) {
+	const root = path.resolve(workspaceRoot)
+	const rootPom = path.join(root, 'pom.xml')
+
+	if (!fs.existsSync(rootPom)) {
+		return []
+	}
+
+	const mvnBin = resolveMavenBinary(root, opts)
+	const visited = new Set()
+	const manifestPaths = [rootPom]
+
+	collectMavenModules(root, mvnBin, visited, manifestPaths)
+
+	const ignorePatterns = resolveWorkspaceDiscoveryIgnore(opts)
+	return filterManifestPathsByDiscoveryIgnore(manifestPaths, root, ignorePatterns)
+}
+
+/**
+ * Recursively collect Maven module pom.xml paths starting from a given directory.
+ *
+ * @param {string} dir - Absolute path to directory containing pom.xml
+ * @param {string} mvnBin - Maven binary path
+ * @param {Set<string>} visited - Already-visited directories (cycle guard)
+ * @param {string[]} manifestPaths - Accumulator for discovered pom.xml paths
+ */
+function collectMavenModules(dir, mvnBin, visited, manifestPaths) {
+	const resolvedDir = path.resolve(dir)
+	if (visited.has(resolvedDir)) {
+		return
+	}
+	visited.add(resolvedDir)
+
+	const modules = listMavenModules(resolvedDir, mvnBin)
+	for (const mod of modules) {
+		const moduleDir = path.resolve(resolvedDir, mod)
+		const modulePom = path.join(moduleDir, 'pom.xml')
+		if (fs.existsSync(modulePom)) {
+			manifestPaths.push(modulePom)
+			collectMavenModules(moduleDir, mvnBin, visited, manifestPaths)
+		}
+	}
+}
+
+/**
+ * Invoke `mvn help:evaluate` to list the `<modules>` declared in a pom.xml.
+ *
+ * @param {string} dir - Directory containing pom.xml
+ * @param {string} mvnBin - Maven binary path
+ * @returns {string[]} Module directory names (relative to `dir`)
+ */
+function listMavenModules(dir, mvnBin) {
+	let output
+	try {
+		output = invokeCommand(mvnBin, [
+			'help:evaluate',
+			'-Dexpression=project.modules',
+			'-q',
+			'-DforceStdout',
+			'-f', path.join(dir, 'pom.xml'),
+			'--batch-mode',
+		], { cwd: dir })
+	} catch {
+		return []
+	}
+
+	const raw = output.toString().trim()
+	if (!raw || raw === 'null') {
+		return []
+	}
+	return parseMavenModuleList(raw)
+}
+
+/**
+ * Parse the `[module-a, module-b]` output from `mvn help:evaluate -Dexpression=project.modules`.
+ *
+ * @param {string} raw - Raw stdout from mvn (e.g. `[module-a, module-b]`)
+ * @returns {string[]}
+ */
+function parseMavenModuleList(raw) {
+	const match = raw.match(/^\[(.+)]$/)
+	if (!match) {
+		return []
+	}
+	return match[1].split(',').map(s => s.trim()).filter(Boolean)
 }
 
 /**
