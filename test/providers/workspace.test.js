@@ -6,6 +6,7 @@ import esmock from 'esmock'
 
 import { discoverMavenModules } from '../../src/providers/java_maven.js'
 import {
+	discoverGradleSubprojects,
 	discoverWorkspaceCrates,
 	discoverWorkspacePackages,
 	filterManifestPathsByDiscoveryIgnore,
@@ -189,13 +190,156 @@ suite('discoverWorkspaceCrates', () => {
 	})
 })
 
+
+suite('discoverGradleSubprojects', () => {
+	test('returns empty when no settings.gradle at root', async () => {
+		const result = await discoverGradleSubprojects('test/providers/tst_manifests/npm')
+		expect(result).to.be.an('array')
+		expect(result).to.have.lengthOf(0)
+	})
+
+	test('discovers multi-project build', async () => {
+		const root = path.resolve('test/providers/tst_manifests/gradle/gradle_multi_project')
+		const initScriptOutput = [
+			`::DA_PROJECT:::${path.resolve(root)}`,
+			`::DA_PROJECT:::app::${path.resolve(root, 'app')}`,
+			`::DA_PROJECT:::lib::${path.resolve(root, 'lib')}`,
+		].join('\n')
+
+		const { discoverGradleSubprojects } = await esmock('../../src/workspace.js', {
+			'../../src/tools.js': {
+				getCustom: () => null,
+				getCustomPath: () => 'gradle',
+				getGitRootDir: () => null,
+				getWrapperPreference: () => false,
+				invokeCommand: () => Buffer.from(initScriptOutput),
+			},
+		})
+		const result = await discoverGradleSubprojects(root)
+		expect(result).to.be.an('array')
+		expect(result).to.have.lengthOf(3)
+		expect(result[0]).to.equal(path.join(root, 'build.gradle'))
+		expect(result.some(p => p.includes(path.join('app', 'build.gradle')))).to.be.true
+		expect(result.some(p => p.includes(path.join('lib', 'build.gradle')))).to.be.true
+	})
+
+	test('discovers nested subprojects', async () => {
+		const root = path.resolve('test/providers/tst_manifests/gradle/gradle_nested_subprojects')
+		const initScriptOutput = [
+			`::DA_PROJECT:::${path.resolve(root)}`,
+			`::DA_PROJECT:::libs:core::${path.resolve(root, 'libs/core')}`,
+			`::DA_PROJECT:::libs:util::${path.resolve(root, 'libs/util')}`,
+		].join('\n')
+
+		const { discoverGradleSubprojects } = await esmock('../../src/workspace.js', {
+			'../../src/tools.js': {
+				getCustom: () => null,
+				getCustomPath: () => 'gradle',
+				getGitRootDir: () => null,
+				getWrapperPreference: () => false,
+				invokeCommand: () => Buffer.from(initScriptOutput),
+			},
+		})
+		const result = await discoverGradleSubprojects(root)
+		expect(result).to.be.an('array')
+		expect(result).to.have.lengthOf(3)
+		expect(result[0]).to.equal(path.join(root, 'build.gradle'))
+		expect(result.some(p => p.includes(path.join('libs', 'core', 'build.gradle')))).to.be.true
+		expect(result.some(p => p.includes(path.join('libs', 'util', 'build.gradle')))).to.be.true
+	})
+
+	test('handles mixed Groovy and Kotlin build files', async () => {
+		const root = path.resolve('test/providers/tst_manifests/gradle/gradle_mixed_variants')
+		const initScriptOutput = [
+			`::DA_PROJECT:::${path.resolve(root)}`,
+			`::DA_PROJECT:::app::${path.resolve(root, 'app')}`,
+			`::DA_PROJECT:::lib::${path.resolve(root, 'lib')}`,
+		].join('\n')
+
+		const { discoverGradleSubprojects } = await esmock('../../src/workspace.js', {
+			'../../src/tools.js': {
+				getCustom: () => null,
+				getCustomPath: () => 'gradle',
+				getGitRootDir: () => null,
+				getWrapperPreference: () => false,
+				invokeCommand: () => Buffer.from(initScriptOutput),
+			},
+		})
+		const result = await discoverGradleSubprojects(root)
+		expect(result).to.be.an('array')
+		expect(result).to.have.lengthOf(3)
+		expect(result[0]).to.equal(path.join(root, 'build.gradle.kts'))
+		expect(result.some(p => p.endsWith(path.join('app', 'build.gradle')))).to.be.true
+		expect(result.some(p => p.endsWith(path.join('lib', 'build.gradle.kts')))).to.be.true
+	})
+
+	test('returns root only when no subprojects', async () => {
+		const root = path.resolve('test/providers/tst_manifests/gradle/gradle_no_subprojects')
+		const initScriptOutput = `::DA_PROJECT:::${path.resolve(root)}\n`
+
+		const { discoverGradleSubprojects } = await esmock('../../src/workspace.js', {
+			'../../src/tools.js': {
+				getCustom: () => null,
+				getCustomPath: () => 'gradle',
+				getGitRootDir: () => null,
+				getWrapperPreference: () => false,
+				invokeCommand: () => Buffer.from(initScriptOutput),
+			},
+		})
+		const result = await discoverGradleSubprojects(root)
+		expect(result).to.be.an('array')
+		expect(result).to.have.lengthOf(1)
+		expect(result[0]).to.equal(path.join(root, 'build.gradle'))
+	})
+
+	test('returns root build file when gradle command fails', async () => {
+		const root = path.resolve('test/providers/tst_manifests/gradle/gradle_multi_project')
+		const { discoverGradleSubprojects } = await esmock('../../src/workspace.js', {
+			'../../src/tools.js': {
+				getCustom: () => null,
+				getCustomPath: () => 'gradle',
+				getGitRootDir: () => null,
+				getWrapperPreference: () => false,
+				invokeCommand: () => { throw new Error('gradle not found') },
+			},
+		})
+		const result = await discoverGradleSubprojects(root)
+		expect(result).to.be.an('array')
+		expect(result).to.have.lengthOf(1)
+		expect(result[0]).to.equal(path.join(root, 'build.gradle'))
+	})
+
+	test('excludes paths matching workspaceDiscoveryIgnore', async () => {
+		const root = path.resolve('test/providers/tst_manifests/gradle/gradle_multi_project')
+		const initScriptOutput = [
+			`::DA_PROJECT:::${path.resolve(root)}`,
+			`::DA_PROJECT:::app::${path.resolve(root, 'app')}`,
+			`::DA_PROJECT:::lib::${path.resolve(root, 'lib')}`,
+		].join('\n')
+
+		const { discoverGradleSubprojects } = await esmock('../../src/workspace.js', {
+			'../../src/tools.js': {
+				getCustom: () => null,
+				getCustomPath: () => 'gradle',
+				getGitRootDir: () => null,
+				getWrapperPreference: () => false,
+				invokeCommand: () => Buffer.from(initScriptOutput),
+			},
+		})
+		const result = await discoverGradleSubprojects(root, {
+			workspaceDiscoveryIgnore: ['**/lib/**'],
+		})
+		expect(result.some(p => p.includes(path.join('app', 'build.gradle')))).to.be.true
+		expect(result.some(p => p.includes(path.join('lib', 'build.gradle')))).to.be.false
+	})
+})
+
 suite('discoverMavenModules', () => {
 	test('returns empty when no pom.xml at root', async () => {
 		const result = await discoverMavenModules('test/providers/tst_manifests/npm')
 		expect(result).to.be.an('array')
 		expect(result).to.have.lengthOf(0)
 	})
-
 	test('returns root pom only when mvn reports no modules', async () => {
 		const root = path.resolve('test/providers/tst_manifests/maven/maven_no_modules')
 		const result = await discoverMavenModules(root)

@@ -9,6 +9,7 @@ import { getCustom } from "./tools.js";
 import { resolveBatchMetadata, resolveContinueOnError } from './batch_opts.js'
 import { discoverMavenModules } from './providers/java_maven.js'
 import {
+	discoverGradleSubprojects,
 	discoverWorkspaceCrates,
 	discoverWorkspacePackages,
 	filterManifestPathsByDiscoveryIgnore,
@@ -25,6 +26,7 @@ export { getProjectLicense, findLicenseFilePath, identifyLicense, getLicenseDeta
 export default { componentAnalysis, stackAnalysis, stackAnalysisBatch, imageAnalysis, validateToken, generateSbom }
 export {
 	discoverMavenModules,
+	discoverGradleSubprojects,
 	discoverWorkspacePackages,
 	discoverWorkspaceCrates,
 	validatePackageJson,
@@ -321,7 +323,7 @@ async function generateOneSbom(manifestPath, workspaceOpts) {
  *
  * @param {string} root - Resolved workspace root
  * @param {Options} opts
- * @returns {Promise<{ ecosystem: 'javascript' | 'cargo' | 'maven' | 'unknown', manifestPaths: string[] }>}
+ * @returns {Promise<{ ecosystem: 'javascript' | 'cargo' | 'maven' | 'gradle' | 'unknown', manifestPaths: string[] }>}
  * @private
  */
 async function detectWorkspaceManifests(root, opts) {
@@ -338,6 +340,15 @@ async function detectWorkspaceManifests(root, opts) {
 		const manifestPaths = await discoverMavenModules(root, opts)
 		if (manifestPaths.length > 0) {
 			return { ecosystem: 'maven', manifestPaths }
+		}
+	}
+
+	const hasGradleSettings = fs.existsSync(path.join(root, 'settings.gradle'))
+		|| fs.existsSync(path.join(root, 'settings.gradle.kts'))
+	if (hasGradleSettings) {
+		const manifestPaths = await discoverGradleSubprojects(root, opts)
+		if (manifestPaths.length > 0) {
+			return { ecosystem: 'gradle', manifestPaths }
 		}
 	}
 

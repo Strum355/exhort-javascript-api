@@ -1,16 +1,19 @@
 import fs from 'node:fs'
+import os from 'node:os'
 import path from 'node:path'
 
 import fg from 'fast-glob'
 import { load as yamlLoad } from 'js-yaml'
 import micromatch from 'micromatch'
 
-import { getCustom, getCustomPath, invokeCommand } from './tools.js'
+import { getCustom, getCustomPath, getGitRootDir, getWrapperPreference, invokeCommand } from './tools.js'
 
 /** Default paths skipped during JS workspace discovery (merged with user patterns). */
 const DEFAULT_WORKSPACE_DISCOVERY_IGNORE = [
 	'**/node_modules/**',
 	'**/.git/**',
+	'**/build/**',
+	'**/.gradle/**',
 ]
 
 /**
@@ -222,6 +225,159 @@ async function discoverFromPackageJsonWorkspaces(root, packageJsonPath, globOpts
 		manifestPaths.unshift(rootPkg)
 	}
 	return filterManifestPathsByDiscoveryIgnore(manifestPaths, root, ignorePatterns)
+}
+
+/**
+ * Walk up from `startDir` to `repoRoot` looking for an executable wrapper script.
+ *
+ * @param {string} startDir - Absolute directory to start from
+ * @param {string} wrapperName - Wrapper filename (e.g. `mvnw`)
+ * @param {string} [repoRoot] - Stop boundary (defaults to git root or filesystem root)
+ * @returns {string | undefined}
+ */
+function traverseForWrapper(startDir, wrapperName, repoRoot = undefined) {
+	const currentDir = path.resolve(startDir)
+	repoRoot = repoRoot || getGitRootDir(currentDir) || path.parse(currentDir).root
+	const wrapperPath = path.join(currentDir, wrapperName)
+
+	try {
+		fs.accessSync(wrapperPath, fs.constants.X_OK)
+		return wrapperPath
+	} catch (err) {
+		if (err.code === 'ENOENT') {
+			const rootDir = path.parse(currentDir).root
+			if (currentDir === repoRoot || currentDir === rootDir) {
+				return undefined
+			}
+			const parentDir = path.dirname(currentDir)
+			if (parentDir === currentDir || parentDir === rootDir) {
+				return undefined
+			}
+			return traverseForWrapper(parentDir, wrapperName, repoRoot)
+		}
+		throw new Error(`failure searching for ${wrapperName}`, { cause: err })
+	}
+}
+
+/** Gradle init script that emits structured project listing. */
+const GRADLE_INIT_SCRIPT = `allprojects {
+    task daListProjects {
+        doLast {
+            println "::DA_PROJECT::\${project.path}::\${project.projectDir}"
+        }
+    }
+}
+`
+
+/**
+ * Resolve the Gradle binary, respecting wrapper preference.
+ *
+ * @param {string} startDir - Directory from which to start the wrapper search
+ * @param {import('./index.js').Options} [opts={}]
+ * @returns {string} Path to the Gradle binary
+ */
+function resolveGradleBinary(startDir, opts = {}) {
+	const localWrapper = 'gradlew' + (process.platform === 'win32' ? '.bat' : '')
+	const useWrapper = getWrapperPreference('gradle', opts)
+	if (useWrapper) {
+		const wrapper = traverseForWrapper(startDir, localWrapper)
+		if (wrapper !== undefined) {
+			return wrapper
+		}
+	}
+	return getCustomPath('gradle', opts)
+}
+
+/**
+ * Discover all build.gradle[.kts] manifest paths in a Gradle multi-project build.
+ * Uses a custom init script to get structured project listing.
+ *
+ * @param {string} workspaceRoot - Absolute or relative path to workspace root (must contain settings.gradle[.kts])
+ * @param {import('./index.js').Options} [opts={}]
+ * @returns {Promise<string[]>} Paths to build.gradle[.kts] files (absolute)
+ */
+export async function discoverGradleSubprojects(workspaceRoot, opts = {}) {
+	const root = path.resolve(workspaceRoot)
+	const hasSettings = fs.existsSync(path.join(root, 'settings.gradle'))
+		|| fs.existsSync(path.join(root, 'settings.gradle.kts'))
+
+	if (!hasSettings) {
+		return []
+	}
+
+	const gradleBin = resolveGradleBinary(root, opts)
+	const manifestPaths = []
+
+	const rootBuildKts = path.join(root, 'build.gradle.kts')
+	const rootBuild = path.join(root, 'build.gradle')
+	if (fs.existsSync(rootBuildKts)) {
+		manifestPaths.push(rootBuildKts)
+	} else if (fs.existsSync(rootBuild)) {
+		manifestPaths.push(rootBuild)
+	}
+
+	const initScriptPath = path.join(os.tmpdir(), `da-list-projects-${process.pid}.gradle`)
+	try {
+		fs.writeFileSync(initScriptPath, GRADLE_INIT_SCRIPT)
+		let output
+		try {
+			output = invokeCommand(gradleBin, [
+				'-q', '--no-daemon',
+				'--init-script', initScriptPath,
+				'daListProjects',
+			], { cwd: root })
+		} catch {
+			const ignorePatterns = resolveWorkspaceDiscoveryIgnore(opts)
+			return filterManifestPathsByDiscoveryIgnore(manifestPaths, root, ignorePatterns)
+		}
+
+		const projects = parseGradleInitScriptOutput(output.toString())
+		for (const proj of projects) {
+			if (proj.path === ':') {
+				continue
+			}
+			const projDir = path.resolve(proj.dir)
+			const buildKts = path.join(projDir, 'build.gradle.kts')
+			const buildGroovy = path.join(projDir, 'build.gradle')
+			if (fs.existsSync(buildKts)) {
+				manifestPaths.push(buildKts)
+			} else if (fs.existsSync(buildGroovy)) {
+				manifestPaths.push(buildGroovy)
+			}
+		}
+	} finally {
+		try { fs.unlinkSync(initScriptPath) } catch { /* ignore */ }
+	}
+
+	const ignorePatterns = resolveWorkspaceDiscoveryIgnore(opts)
+	return filterManifestPathsByDiscoveryIgnore(manifestPaths, root, ignorePatterns)
+}
+
+/**
+ * Parse the structured output from the Gradle init script.
+ *
+ * @param {string} raw - Raw stdout from gradle
+ * @returns {{ path: string, dir: string }[]}
+ */
+function parseGradleInitScriptOutput(raw) {
+	const projects = []
+	for (const line of raw.split('\n')) {
+		if (!line.startsWith('::DA_PROJECT::')) {
+			continue
+		}
+		const prefix = '::DA_PROJECT::'
+		const remainder = line.substring(prefix.length)
+		const lastSep = remainder.lastIndexOf('::')
+		if (lastSep < 0) {
+			continue
+		}
+		const projPath = remainder.substring(0, lastSep)
+		const dir = remainder.substring(lastSep + 2)
+		if (projPath && dir) {
+			projects.push({ path: projPath, dir })
+		}
+	}
+	return projects
 }
 
 /**
