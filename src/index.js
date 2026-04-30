@@ -10,6 +10,7 @@ import { resolveBatchMetadata, resolveContinueOnError } from './batch_opts.js'
 import { discoverMavenModules } from './providers/java_maven.js'
 import { discoverGradleSubprojects } from './providers/java_gradle.js'
 import {
+	discoverGoWorkspaceModules,
 	discoverWorkspaceCrates,
 	discoverWorkspacePackages,
 	filterManifestPathsByDiscoveryIgnore,
@@ -27,6 +28,7 @@ export default { componentAnalysis, stackAnalysis, stackAnalysisBatch, imageAnal
 export {
 	discoverMavenModules,
 	discoverGradleSubprojects,
+	discoverGoWorkspaceModules,
 	discoverWorkspacePackages,
 	discoverWorkspaceCrates,
 	validatePackageJson,
@@ -323,7 +325,7 @@ async function generateOneSbom(manifestPath, workspaceOpts) {
  *
  * @param {string} root - Resolved workspace root
  * @param {Options} opts
- * @returns {Promise<{ ecosystem: 'javascript' | 'cargo' | 'maven' | 'gradle' | 'unknown', manifestPaths: string[] }>}
+ * @returns {Promise<{ ecosystem: 'javascript' | 'cargo' | 'maven' | 'gradle' | 'gomodules' | 'unknown', manifestPaths: string[] }>}
  * @private
  */
 async function detectWorkspaceManifests(root, opts) {
@@ -349,6 +351,13 @@ async function detectWorkspaceManifests(root, opts) {
 		const manifestPaths = await discoverGradleSubprojects(root, opts)
 		if (manifestPaths.length > 0) {
 			return { ecosystem: 'gradle', manifestPaths }
+		}
+	}
+
+	if (fs.existsSync(path.join(root, 'go.work'))) {
+		const manifestPaths = await discoverGoWorkspaceModules(root, opts)
+		if (manifestPaths.length > 0) {
+			return { ecosystem: 'gomodules', manifestPaths }
 		}
 	}
 
@@ -547,7 +556,7 @@ async function stackAnalysisBatch(workspaceRoot, html = false, opts = {}) {
 	}
 
 	if (manifestPaths.length === 0) {
-		throw new Error(`No workspace manifests found at ${root}. Ensure Cargo.toml+Cargo.lock or package.json+lock file exist.`)
+		throw new Error(`No workspace manifests found at ${root}. Ensure a supported workspace root exists (Cargo.toml+Cargo.lock, go.work, or package.json+lock file).`)
 	}
 
 	const workspaceOpts = { ...opts, TRUSTIFY_DA_WORKSPACE_DIR: root }
