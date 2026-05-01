@@ -4,9 +4,9 @@ import path from 'node:path'
 import { expect } from 'chai'
 import esmock from 'esmock'
 
+import { discoverGradleSubprojects } from '../../src/providers/java_gradle.js'
 import { discoverMavenModules } from '../../src/providers/java_maven.js'
 import {
-	discoverGradleSubprojects,
 	discoverWorkspaceCrates,
 	discoverWorkspacePackages,
 	filterManifestPathsByDiscoveryIgnore,
@@ -206,7 +206,7 @@ suite('discoverGradleSubprojects', () => {
 			`::DA_PROJECT:::lib::${path.resolve(root, 'lib')}`,
 		].join('\n')
 
-		const { discoverGradleSubprojects } = await esmock('../../src/workspace.js', {
+		const { discoverGradleSubprojects } = await esmock('../../src/providers/java_gradle.js', {
 			'../../src/tools.js': {
 				getCustom: () => null,
 				getCustomPath: () => 'gradle',
@@ -231,7 +231,7 @@ suite('discoverGradleSubprojects', () => {
 			`::DA_PROJECT:::libs:util::${path.resolve(root, 'libs/util')}`,
 		].join('\n')
 
-		const { discoverGradleSubprojects } = await esmock('../../src/workspace.js', {
+		const { discoverGradleSubprojects } = await esmock('../../src/providers/java_gradle.js', {
 			'../../src/tools.js': {
 				getCustom: () => null,
 				getCustomPath: () => 'gradle',
@@ -256,7 +256,7 @@ suite('discoverGradleSubprojects', () => {
 			`::DA_PROJECT:::lib::${path.resolve(root, 'lib')}`,
 		].join('\n')
 
-		const { discoverGradleSubprojects } = await esmock('../../src/workspace.js', {
+		const { discoverGradleSubprojects } = await esmock('../../src/providers/java_gradle.js', {
 			'../../src/tools.js': {
 				getCustom: () => null,
 				getCustomPath: () => 'gradle',
@@ -277,7 +277,7 @@ suite('discoverGradleSubprojects', () => {
 		const root = path.resolve('test/providers/tst_manifests/gradle/gradle_no_subprojects')
 		const initScriptOutput = `::DA_PROJECT:::${path.resolve(root)}\n`
 
-		const { discoverGradleSubprojects } = await esmock('../../src/workspace.js', {
+		const { discoverGradleSubprojects } = await esmock('../../src/providers/java_gradle.js', {
 			'../../src/tools.js': {
 				getCustom: () => null,
 				getCustomPath: () => 'gradle',
@@ -294,7 +294,7 @@ suite('discoverGradleSubprojects', () => {
 
 	test('returns root build file when gradle command fails', async () => {
 		const root = path.resolve('test/providers/tst_manifests/gradle/gradle_multi_project')
-		const { discoverGradleSubprojects } = await esmock('../../src/workspace.js', {
+		const { discoverGradleSubprojects } = await esmock('../../src/providers/java_gradle.js', {
 			'../../src/tools.js': {
 				getCustom: () => null,
 				getCustomPath: () => 'gradle',
@@ -317,7 +317,7 @@ suite('discoverGradleSubprojects', () => {
 			`::DA_PROJECT:::lib::${path.resolve(root, 'lib')}`,
 		].join('\n')
 
-		const { discoverGradleSubprojects } = await esmock('../../src/workspace.js', {
+		const { discoverGradleSubprojects } = await esmock('../../src/providers/java_gradle.js', {
 			'../../src/tools.js': {
 				getCustom: () => null,
 				getCustomPath: () => 'gradle',

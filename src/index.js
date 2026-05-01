@@ -8,8 +8,8 @@ import fs from 'node:fs'
 import { getCustom } from "./tools.js";
 import { resolveBatchMetadata, resolveContinueOnError } from './batch_opts.js'
 import { discoverMavenModules } from './providers/java_maven.js'
+import { discoverGradleSubprojects } from './providers/java_gradle.js'
 import {
-	discoverGradleSubprojects,
 	discoverWorkspaceCrates,
 	discoverWorkspacePackages,
 	filterManifestPathsByDiscoveryIgnore,

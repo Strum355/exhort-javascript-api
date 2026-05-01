@@ -1,4 +1,6 @@
+import crypto from 'node:crypto'
 import fs from 'node:fs'
+import os from 'node:os'
 import path from 'node:path'
 import { EOL } from 'os'
 
@@ -6,6 +8,8 @@ import TOML from 'fast-toml'
 
 import { readLicenseFile } from '../license/license_utils.js'
 import Sbom from '../sbom.js'
+import { getCustomPath, getWrapperPreference, invokeCommand, traverseForWrapper } from '../tools.js'
+import { filterManifestPathsByDiscoveryIgnore, resolveWorkspaceDiscoveryIgnore } from '../workspace.js'
 
 import Base_java, { ecosystem_gradle } from "./base_java.js";
 
@@ -465,4 +469,131 @@ export default class Java_gradle extends Base_java {
 
 		return undefined
 	}
+}
+
+const DEFAULT_GRADLE_DISCOVERY_IGNORE = [
+	'**/build/**',
+	'**/.gradle/**',
+]
+
+/**
+ * Resolve the Gradle binary, respecting wrapper preference.
+ *
+ * @param {string} startDir - Directory from which to start the wrapper search
+ * @param {import('../index.js').Options} [opts={}]
+ * @returns {string} Path to the Gradle binary
+ */
+function resolveGradleBinary(startDir, opts = {}) {
+	const localWrapper = 'gradlew' + (process.platform === 'win32' ? '.bat' : '')
+	const useWrapper = getWrapperPreference('gradle', opts)
+	if (useWrapper) {
+		const wrapper = traverseForWrapper(startDir, localWrapper)
+		if (wrapper !== undefined) {
+			return wrapper
+		}
+	}
+	return getCustomPath('gradle', opts)
+}
+
+/** Gradle init script that emits structured project listing. */
+const GRADLE_INIT_SCRIPT = `allprojects {
+    task daListProjects {
+        doLast {
+            println "::DA_PROJECT::\${project.path}::\${project.projectDir}"
+        }
+    }
+}
+`
+
+/**
+ * Discover all build.gradle[.kts] manifest paths in a Gradle multi-project build.
+ * Uses a custom init script to get structured project listing.
+ *
+ * @param {string} workspaceRoot - Absolute or relative path to workspace root (must contain settings.gradle[.kts])
+ * @param {import('../index.js').Options} [opts={}]
+ * @returns {Promise<string[]>} Paths to build.gradle[.kts] files (absolute)
+ */
+export async function discoverGradleSubprojects(workspaceRoot, opts = {}) {
+	const root = path.resolve(workspaceRoot)
+	const hasSettings = fs.existsSync(path.join(root, 'settings.gradle'))
+		|| fs.existsSync(path.join(root, 'settings.gradle.kts'))
+
+	if (!hasSettings) {
+		return []
+	}
+
+	const gradleBin = resolveGradleBinary(root, opts)
+	const manifestPaths = []
+
+	const rootBuildKts = path.join(root, 'build.gradle.kts')
+	const rootBuild = path.join(root, 'build.gradle')
+	if (fs.existsSync(rootBuildKts)) {
+		manifestPaths.push(rootBuildKts)
+	} else if (fs.existsSync(rootBuild)) {
+		manifestPaths.push(rootBuild)
+	}
+
+	const initScriptPath = path.join(os.tmpdir(), `da-list-projects-${crypto.randomUUID()}.gradle`)
+	try {
+		fs.writeFileSync(initScriptPath, GRADLE_INIT_SCRIPT)
+		let output
+		try {
+			output = invokeCommand(gradleBin, [
+				'-q', '--no-daemon',
+				'--init-script', initScriptPath,
+				'daListProjects',
+			], { cwd: root })
+		} catch {
+			const ignorePatterns = [...resolveWorkspaceDiscoveryIgnore(opts), ...DEFAULT_GRADLE_DISCOVERY_IGNORE]
+			return filterManifestPathsByDiscoveryIgnore(manifestPaths, root, ignorePatterns)
+		}
+
+		const projects = parseGradleInitScriptOutput(output.toString())
+		for (const proj of projects) {
+			if (proj.path === ':') {
+				continue
+			}
+			const projDir = path.resolve(proj.dir)
+			const buildKts = path.join(projDir, 'build.gradle.kts')
+			const buildGroovy = path.join(projDir, 'build.gradle')
+			if (fs.existsSync(buildKts)) {
+				manifestPaths.push(buildKts)
+			} else if (fs.existsSync(buildGroovy)) {
+				manifestPaths.push(buildGroovy)
+			}
+		}
+	} finally {
+		try { fs.unlinkSync(initScriptPath) } catch { /* ignore */ }
+	}
+
+	const ignorePatterns = [...resolveWorkspaceDiscoveryIgnore(opts), ...DEFAULT_GRADLE_DISCOVERY_IGNORE]
+	return filterManifestPathsByDiscoveryIgnore(manifestPaths, root, ignorePatterns)
+}
+
+/**
+ * Parse the structured output from the Gradle init script.
+ *
+ * @param {string} raw - Raw stdout from gradle
+ * @returns {{ path: string, dir: string }[]}
+ */
+export function parseGradleInitScriptOutput(raw) {
+	const projects = []
+	for (const rawLine of raw.split('\n')) {
+		const line = rawLine.trimEnd()
+		if (!line.startsWith('::DA_PROJECT::')) {
+			continue
+		}
+		const prefix = '::DA_PROJECT::'
+		const remainder = line.substring(prefix.length)
+		const lastSep = remainder.lastIndexOf('::')
+		if (lastSep < 0) {
+			continue
+		}
+		const projPath = remainder.substring(0, lastSep)
+		const dir = remainder.substring(lastSep + 2)
+		if (projPath && dir) {
+			projects.push({ path: projPath, dir })
+		}
+	}
+	return projects
 }
