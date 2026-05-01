@@ -7,7 +7,8 @@ import { XMLParser } from 'fast-xml-parser'
 
 import { getLicense } from '../license/license_utils.js'
 import Sbom from '../sbom.js'
-import { getCustom } from '../tools.js'
+import { getCustom, getCustomPath, getWrapperPreference, invokeCommand, traverseForWrapper } from '../tools.js'
+import { filterManifestPathsByDiscoveryIgnore, resolveWorkspaceDiscoveryIgnore } from '../workspace.js'
 
 import Base_java, { ecosystem_maven } from "./base_java.js";
 
@@ -308,4 +309,115 @@ export default class Java_maven extends Base_java {
 	#dependencyIn(dep, deps) {
 		return deps.filter(d => dep.artifactId === d.artifactId && dep.groupId === d.groupId && dep.scope === d.scope).length > 0
 	}
+}
+
+const DEFAULT_MAVEN_DISCOVERY_IGNORE = [
+	'**/target/**',
+]
+
+/**
+ * Resolve the Maven binary, respecting wrapper preference.
+ *
+ * @param {string} startDir - Directory from which to start the wrapper search
+ * @param {object} [opts={}]
+ * @returns {string} Path to the Maven binary
+ */
+function resolveMavenBinary(startDir, opts = {}) {
+	const localWrapper = 'mvnw' + (process.platform === 'win32' ? '.cmd' : '')
+	const useWrapper = getWrapperPreference('mvn', opts)
+	if (useWrapper) {
+		const wrapper = traverseForWrapper(startDir, localWrapper)
+		if (wrapper !== undefined) {
+			return wrapper
+		}
+	}
+	return getCustomPath('mvn', opts)
+}
+
+/**
+ * Discover all pom.xml manifest paths in a Maven multi-module project.
+ *
+ * @param {string} workspaceRoot - Absolute or relative path to workspace root (must contain pom.xml)
+ * @param {object} [opts={}]
+ * @returns {Promise<string[]>} Paths to pom.xml files (absolute)
+ */
+export async function discoverMavenModules(workspaceRoot, opts = {}) {
+	const root = path.resolve(workspaceRoot)
+	const rootPom = path.join(root, 'pom.xml')
+
+	if (!fs.existsSync(rootPom)) {
+		return []
+	}
+
+	const mvnBin = resolveMavenBinary(root, opts)
+	const visited = new Set()
+	const manifestPaths = [rootPom]
+
+	collectMavenModules(root, mvnBin, visited, manifestPaths)
+
+	const ignorePatterns = [...resolveWorkspaceDiscoveryIgnore(opts), ...DEFAULT_MAVEN_DISCOVERY_IGNORE]
+	return filterManifestPathsByDiscoveryIgnore(manifestPaths, root, ignorePatterns)
+}
+
+/**
+ * @param {string} dir - Absolute path to directory containing pom.xml
+ * @param {string} mvnBin - Maven binary path
+ * @param {Set<string>} visited - Already-visited directories (cycle guard)
+ * @param {string[]} manifestPaths - Accumulator for discovered pom.xml paths
+ */
+function collectMavenModules(dir, mvnBin, visited, manifestPaths) {
+	const resolvedDir = path.resolve(dir)
+	if (visited.has(resolvedDir)) {
+		return
+	}
+	visited.add(resolvedDir)
+
+	const modules = listMavenModules(resolvedDir, mvnBin)
+	for (const mod of modules) {
+		const moduleDir = path.resolve(resolvedDir, mod)
+		const modulePom = path.join(moduleDir, 'pom.xml')
+		if (fs.existsSync(modulePom)) {
+			manifestPaths.push(modulePom)
+			collectMavenModules(moduleDir, mvnBin, visited, manifestPaths)
+		}
+	}
+}
+
+/**
+ * @param {string} dir - Directory containing pom.xml
+ * @param {string} mvnBin - Maven binary path
+ * @returns {string[]} Module directory names (relative to `dir`)
+ */
+function listMavenModules(dir, mvnBin) {
+	let output
+	try {
+		output = invokeCommand(mvnBin, [
+			'help:evaluate',
+			'-Dexpression=project.modules',
+			'-q',
+			'-DforceStdout',
+			'-f', path.join(dir, 'pom.xml'),
+			'--batch-mode',
+		], { cwd: dir })
+	} catch {
+		return []
+	}
+
+	const raw = output.toString().trim()
+	if (!raw || raw === 'null') {
+		return []
+	}
+	return parseMavenModuleList(raw)
+}
+
+/**
+ * @param {string} raw - Raw stdout from mvn (e.g. `[module-a, module-b]`)
+ * @returns {string[]}
+ */
+function parseMavenModuleList(raw) {
+	const match = raw.match(/^\[(.+)]$/)
+	if (!match) {
+		return []
+	}
+	return match[1].split(',').map(s => s.trim()).filter(Boolean)
 }

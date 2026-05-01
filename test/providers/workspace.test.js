@@ -4,8 +4,8 @@ import path from 'node:path'
 import { expect } from 'chai'
 import esmock from 'esmock'
 
+import { discoverMavenModules } from '../../src/providers/java_maven.js'
 import {
-	discoverMavenModules,
 	discoverWorkspaceCrates,
 	discoverWorkspacePackages,
 	filterManifestPathsByDiscoveryIgnore,
@@ -198,7 +198,7 @@ suite('discoverMavenModules', () => {
 
 	test('returns root pom only when mvn reports no modules', async () => {
 		const root = path.resolve('test/providers/tst_manifests/maven/maven_no_modules')
-		const { discoverMavenModules } = await esmock('../../src/workspace.js', {
+		const { discoverMavenModules } = await esmock('../../src/providers/java_maven.js', {
 			'../../src/tools.js': {
 				getCustom: () => null,
 				getCustomPath: () => 'mvn',
@@ -215,7 +215,7 @@ suite('discoverMavenModules', () => {
 
 	test('discovers multi-module project', async () => {
 		const root = path.resolve('test/providers/tst_manifests/maven/maven_multi_module')
-		const { discoverMavenModules } = await esmock('../../src/workspace.js', {
+		const { discoverMavenModules } = await esmock('../../src/providers/java_maven.js', {
 			'../../src/tools.js': {
 				getCustom: () => null,
 				getCustomPath: () => 'mvn',
@@ -244,7 +244,7 @@ suite('discoverMavenModules', () => {
 
 	test('discovers nested aggregator modules recursively', async () => {
 		const root = path.resolve('test/providers/tst_manifests/maven/maven_nested_aggregator')
-		const { discoverMavenModules } = await esmock('../../src/workspace.js', {
+		const { discoverMavenModules } = await esmock('../../src/providers/java_maven.js', {
 			'../../src/tools.js': {
 				getCustom: () => null,
 				getCustomPath: () => 'mvn',
@@ -272,7 +272,7 @@ suite('discoverMavenModules', () => {
 
 	test('returns root pom when mvn command fails', async () => {
 		const root = path.resolve('test/providers/tst_manifests/maven/maven_multi_module')
-		const { discoverMavenModules } = await esmock('../../src/workspace.js', {
+		const { discoverMavenModules } = await esmock('../../src/providers/java_maven.js', {
 			'../../src/tools.js': {
 				getCustom: () => null,
 				getCustomPath: () => 'mvn',
@@ -289,7 +289,7 @@ suite('discoverMavenModules', () => {
 
 	test('excludes paths matching workspaceDiscoveryIgnore', async () => {
 		const root = path.resolve('test/providers/tst_manifests/maven/maven_multi_module')
-		const { discoverMavenModules } = await esmock('../../src/workspace.js', {
+		const { discoverMavenModules } = await esmock('../../src/providers/java_maven.js', {
 			'../../src/tools.js': {
 				getCustom: () => null,
 				getCustomPath: () => 'mvn',
