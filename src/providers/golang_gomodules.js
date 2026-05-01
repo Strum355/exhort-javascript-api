@@ -6,6 +6,7 @@ import { PackageURL } from 'packageurl-js'
 import { readLicenseFile } from '../license/license_utils.js'
 import Sbom from '../sbom.js'
 import { getCustom, getCustomPath, invokeCommand } from "../tools.js";
+import { filterManifestPathsByDiscoveryIgnore, resolveWorkspaceDiscoveryIgnore } from '../workspace.js'
 
 import { getParser, getRequireQuery } from './gomod_parser.js'
 
@@ -426,4 +427,57 @@ function getVersionOfPackage(fullPackage) {
 function getLineSeparatorGolang() {
 	let reg = /\n|\r\n/
 	return reg
+}
+
+/**
+ * Discover all go.mod manifest paths in a Go workspace.
+ * Uses `go work edit -json` to get workspace members.
+ *
+ * @param {string} workspaceRoot - Absolute or relative path to workspace root (must contain go.work)
+ * @param {import('../index.js').Options} [opts={}]
+ * @returns {Promise<string[]>} Paths to go.mod files (absolute)
+ */
+export async function discoverGoWorkspaceModules(workspaceRoot, opts = {}) {
+	const root = path.resolve(workspaceRoot)
+	const goWork = path.join(root, 'go.work')
+
+	if (!fs.existsSync(goWork)) {
+		return []
+	}
+
+	const goBin = getCustomPath('go', opts)
+	let output
+	try {
+		output = invokeCommand(goBin, ['work', 'edit', '-json', goWork], { cwd: root })
+	} catch {
+		return []
+	}
+
+	let workspace
+	try {
+		workspace = JSON.parse(output.toString().trim())
+	} catch {
+		return []
+	}
+
+	const useEntries = workspace.Use || []
+	if (useEntries.length === 0) {
+		return []
+	}
+
+	const manifestPaths = []
+	for (const entry of useEntries) {
+		const diskPath = entry.DiskPath
+		if (!diskPath) {
+			continue
+		}
+		const moduleDir = path.resolve(root, diskPath)
+		const goMod = path.join(moduleDir, 'go.mod')
+		if (fs.existsSync(goMod)) {
+			manifestPaths.push(goMod)
+		}
+	}
+
+	const ignorePatterns = resolveWorkspaceDiscoveryIgnore(opts)
+	return filterManifestPathsByDiscoveryIgnore(manifestPaths, root, ignorePatterns)
 }

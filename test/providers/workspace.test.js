@@ -4,10 +4,10 @@ import path from 'node:path'
 import { expect } from 'chai'
 import esmock from 'esmock'
 
+import { discoverGoWorkspaceModules } from '../../src/providers/golang_gomodules.js'
 import { discoverGradleSubprojects } from '../../src/providers/java_gradle.js'
 import { discoverMavenModules } from '../../src/providers/java_maven.js'
 import {
-	discoverGoWorkspaceModules,
 	discoverWorkspaceCrates,
 	discoverWorkspacePackages,
 	filterManifestPathsByDiscoveryIgnore,
@@ -339,7 +339,7 @@ suite('discoverGoWorkspaceModules', () => {
 				{ DiskPath: './module-b' },
 			],
 		}
-		const { discoverGoWorkspaceModules } = await esmock('../../src/workspace.js', {
+		const { discoverGoWorkspaceModules } = await esmock('../../src/providers/golang_gomodules.js', {
 			'../../src/tools.js': {
 				getCustom: () => null,
 				getCustomPath: () => 'go',
@@ -363,7 +363,7 @@ suite('discoverGoWorkspaceModules', () => {
 				{ DiskPath: './libs/util' },
 			],
 		}
-		const { discoverGoWorkspaceModules } = await esmock('../../src/workspace.js', {
+		const { discoverGoWorkspaceModules } = await esmock('../../src/providers/golang_gomodules.js', {
 			'../../src/tools.js': {
 				getCustom: () => null,
 				getCustomPath: () => 'go',
@@ -382,7 +382,7 @@ suite('discoverGoWorkspaceModules', () => {
 			Go: { Version: '1.22' },
 			Use: [{ DiskPath: './mymod' }],
 		}
-		const { discoverGoWorkspaceModules } = await esmock('../../src/workspace.js', {
+		const { discoverGoWorkspaceModules } = await esmock('../../src/providers/golang_gomodules.js', {
 			'../../src/tools.js': {
 				getCustom: () => null,
 				getCustomPath: () => 'go',
@@ -403,7 +403,7 @@ suite('discoverGoWorkspaceModules', () => {
 				{ DiskPath: './nonexistent' },
 			],
 		}
-		const { discoverGoWorkspaceModules } = await esmock('../../src/workspace.js', {
+		const { discoverGoWorkspaceModules } = await esmock('../../src/providers/golang_gomodules.js', {
 			'../../src/tools.js': {
 				getCustom: () => null,
 				getCustomPath: () => 'go',
@@ -417,7 +417,7 @@ suite('discoverGoWorkspaceModules', () => {
 
 	test('returns empty when go command fails', async () => {
 		const root = path.resolve('test/providers/tst_manifests/golang/go_workspace')
-		const { discoverGoWorkspaceModules } = await esmock('../../src/workspace.js', {
+		const { discoverGoWorkspaceModules } = await esmock('../../src/providers/golang_gomodules.js', {
 			'../../src/tools.js': {
 				getCustom: () => null,
 				getCustomPath: () => 'go',
@@ -430,7 +430,7 @@ suite('discoverGoWorkspaceModules', () => {
 
 	test('returns empty when go output is invalid JSON', async () => {
 		const root = path.resolve('test/providers/tst_manifests/golang/go_workspace')
-		const { discoverGoWorkspaceModules } = await esmock('../../src/workspace.js', {
+		const { discoverGoWorkspaceModules } = await esmock('../../src/providers/golang_gomodules.js', {
 			'../../src/tools.js': {
 				getCustom: () => null,
 				getCustomPath: () => 'go',
@@ -444,7 +444,7 @@ suite('discoverGoWorkspaceModules', () => {
 	test('returns empty when Use array is empty', async () => {
 		const root = path.resolve('test/providers/tst_manifests/golang/go_workspace')
 		const goWorkJson = { Go: { Version: '1.22' }, Use: [] }
-		const { discoverGoWorkspaceModules } = await esmock('../../src/workspace.js', {
+		const { discoverGoWorkspaceModules } = await esmock('../../src/providers/golang_gomodules.js', {
 			'../../src/tools.js': {
 				getCustom: () => null,
 				getCustomPath: () => 'go',
@@ -464,7 +464,7 @@ suite('discoverGoWorkspaceModules', () => {
 				{ DiskPath: './libs/util' },
 			],
 		}
-		const { discoverGoWorkspaceModules } = await esmock('../../src/workspace.js', {
+		const { discoverGoWorkspaceModules } = await esmock('../../src/providers/golang_gomodules.js', {
 			'../../src/tools.js': {
 				getCustom: () => null,
 				getCustomPath: () => 'go',
