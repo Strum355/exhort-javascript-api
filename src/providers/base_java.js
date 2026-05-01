@@ -145,7 +145,7 @@ export default class Base_Java {
 		const useWrapper = getWrapperPreference(this.globalBinary, opts)
 		if (useWrapper) {
 			const manifestDir = path.dirname(this.normalizePath(manifestPath))
-			const wrapper = traverseForWrapper(manifestDir)
+			const wrapper = traverseForWrapper(manifestDir, this.localWrapper)
 			if (wrapper !== undefined) {
 				try {
 					this._invokeCommand(wrapper, ['--version'], {cwd: manifestDir})
