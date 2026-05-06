@@ -8,7 +8,7 @@ import TOML from 'fast-toml'
 
 import { readLicenseFile } from '../license/license_utils.js'
 import Sbom from '../sbom.js'
-import { getCustomPath, getWrapperPreference, invokeCommand, traverseForWrapper } from '../tools.js'
+import { invokeCommand, resolveBinary } from '../tools.js'
 import { filterManifestPathsByDiscoveryIgnore, resolveWorkspaceDiscoveryIgnore } from '../workspace.js'
 
 import Base_java, { ecosystem_gradle } from "./base_java.js";
@@ -476,25 +476,6 @@ const DEFAULT_GRADLE_DISCOVERY_IGNORE = [
 	'**/.gradle/**',
 ]
 
-/**
- * Resolve the Gradle binary, respecting wrapper preference.
- *
- * @param {string} startDir - Directory from which to start the wrapper search
- * @param {import('../index.js').Options} [opts={}]
- * @returns {string} Path to the Gradle binary
- */
-function resolveGradleBinary(startDir, opts = {}) {
-	const localWrapper = 'gradlew' + (process.platform === 'win32' ? '.bat' : '')
-	const useWrapper = getWrapperPreference('gradle', opts)
-	if (useWrapper) {
-		const wrapper = traverseForWrapper(startDir, localWrapper)
-		if (wrapper !== undefined) {
-			return wrapper
-		}
-	}
-	return getCustomPath('gradle', opts)
-}
-
 /** Gradle init script that emits structured project listing. */
 const GRADLE_INIT_SCRIPT = `allprojects {
     task daListProjects {
@@ -522,7 +503,8 @@ export async function discoverGradleSubprojects(workspaceRoot, opts = {}) {
 		return []
 	}
 
-	const gradleBin = resolveGradleBinary(root, opts)
+	const localWrapper = 'gradlew' + (process.platform === 'win32' ? '.bat' : '')
+	const gradleBin = resolveBinary('gradle', localWrapper, root, opts)
 	const manifestPaths = []
 
 	const rootBuildKts = path.join(root, 'build.gradle.kts')

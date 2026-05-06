@@ -208,10 +208,7 @@ suite('discoverGradleSubprojects', () => {
 
 		const { discoverGradleSubprojects } = await esmock('../../src/providers/java_gradle.js', {
 			'../../src/tools.js': {
-				getCustom: () => null,
-				getCustomPath: () => 'gradle',
-				getGitRootDir: () => null,
-				getWrapperPreference: () => false,
+				resolveBinary: () => 'gradle',
 				invokeCommand: () => Buffer.from(initScriptOutput),
 			},
 		})
@@ -233,10 +230,7 @@ suite('discoverGradleSubprojects', () => {
 
 		const { discoverGradleSubprojects } = await esmock('../../src/providers/java_gradle.js', {
 			'../../src/tools.js': {
-				getCustom: () => null,
-				getCustomPath: () => 'gradle',
-				getGitRootDir: () => null,
-				getWrapperPreference: () => false,
+				resolveBinary: () => 'gradle',
 				invokeCommand: () => Buffer.from(initScriptOutput),
 			},
 		})
@@ -258,10 +252,7 @@ suite('discoverGradleSubprojects', () => {
 
 		const { discoverGradleSubprojects } = await esmock('../../src/providers/java_gradle.js', {
 			'../../src/tools.js': {
-				getCustom: () => null,
-				getCustomPath: () => 'gradle',
-				getGitRootDir: () => null,
-				getWrapperPreference: () => false,
+				resolveBinary: () => 'gradle',
 				invokeCommand: () => Buffer.from(initScriptOutput),
 			},
 		})
@@ -279,10 +270,7 @@ suite('discoverGradleSubprojects', () => {
 
 		const { discoverGradleSubprojects } = await esmock('../../src/providers/java_gradle.js', {
 			'../../src/tools.js': {
-				getCustom: () => null,
-				getCustomPath: () => 'gradle',
-				getGitRootDir: () => null,
-				getWrapperPreference: () => false,
+				resolveBinary: () => 'gradle',
 				invokeCommand: () => Buffer.from(initScriptOutput),
 			},
 		})
@@ -296,10 +284,7 @@ suite('discoverGradleSubprojects', () => {
 		const root = path.resolve('test/providers/tst_manifests/gradle/gradle_multi_project')
 		const { discoverGradleSubprojects } = await esmock('../../src/providers/java_gradle.js', {
 			'../../src/tools.js': {
-				getCustom: () => null,
-				getCustomPath: () => 'gradle',
-				getGitRootDir: () => null,
-				getWrapperPreference: () => false,
+				resolveBinary: () => 'gradle',
 				invokeCommand: () => { throw new Error('gradle not found') },
 			},
 		})
@@ -319,10 +304,7 @@ suite('discoverGradleSubprojects', () => {
 
 		const { discoverGradleSubprojects } = await esmock('../../src/providers/java_gradle.js', {
 			'../../src/tools.js': {
-				getCustom: () => null,
-				getCustomPath: () => 'gradle',
-				getGitRootDir: () => null,
-				getWrapperPreference: () => false,
+				resolveBinary: () => 'gradle',
 				invokeCommand: () => Buffer.from(initScriptOutput),
 			},
 		})
