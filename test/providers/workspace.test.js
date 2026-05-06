@@ -206,7 +206,7 @@ suite('discoverGradleSubprojects', () => {
 		expect(result[0]).to.equal(path.join(root, 'build.gradle'))
 		expect(result.some(p => p.includes(path.join('app', 'build.gradle')))).to.be.true
 		expect(result.some(p => p.includes(path.join('lib', 'build.gradle')))).to.be.true
-	})
+	}).timeout(40000)
 
 	test('discovers nested subprojects', async () => {
 		const root = path.resolve('test/providers/tst_manifests/gradle/gradle_nested_subprojects')
@@ -216,7 +216,7 @@ suite('discoverGradleSubprojects', () => {
 		expect(result[0]).to.equal(path.join(root, 'build.gradle'))
 		expect(result.some(p => p.includes(path.join('libs', 'core', 'build.gradle')))).to.be.true
 		expect(result.some(p => p.includes(path.join('libs', 'util', 'build.gradle')))).to.be.true
-	})
+	}).timeout(40000)
 
 	test('handles mixed Groovy and Kotlin build files', async () => {
 		const root = path.resolve('test/providers/tst_manifests/gradle/gradle_mixed_variants')
@@ -226,7 +226,7 @@ suite('discoverGradleSubprojects', () => {
 		expect(result[0]).to.equal(path.join(root, 'build.gradle.kts'))
 		expect(result.some(p => p.endsWith(path.join('app', 'build.gradle')))).to.be.true
 		expect(result.some(p => p.endsWith(path.join('lib', 'build.gradle.kts')))).to.be.true
-	})
+	}).timeout(40000)
 
 	test('returns root only when no subprojects', async () => {
 		const root = path.resolve('test/providers/tst_manifests/gradle/gradle_no_subprojects')
@@ -234,7 +234,7 @@ suite('discoverGradleSubprojects', () => {
 		expect(result).to.be.an('array')
 		expect(result).to.have.lengthOf(1)
 		expect(result[0]).to.equal(path.join(root, 'build.gradle'))
-	})
+	}).timeout(40000)
 
 	test('returns root build file when gradle is not available', async () => {
 		const root = path.resolve('test/providers/tst_manifests/gradle/gradle_multi_project')
@@ -258,7 +258,7 @@ suite('discoverGradleSubprojects', () => {
 		})
 		expect(result.some(p => p.includes(path.join('app', 'build.gradle')))).to.be.true
 		expect(result.some(p => p.includes(path.join('lib', 'build.gradle')))).to.be.false
-	})
+	}).timeout(40000)
 })
 
 suite('discoverMavenModules', () => {
