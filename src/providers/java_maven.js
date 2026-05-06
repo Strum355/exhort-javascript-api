@@ -7,7 +7,7 @@ import { XMLParser } from 'fast-xml-parser'
 
 import { getLicense } from '../license/license_utils.js'
 import Sbom from '../sbom.js'
-import { getCustom, invokeCommand, resolveBinary } from '../tools.js'
+import { getCustom, invokeCommand } from '../tools.js'
 import { filterManifestPathsByDiscoveryIgnore, resolveWorkspaceDiscoveryIgnore } from '../workspace.js'
 
 import Base_java, { ecosystem_maven } from "./base_java.js";
@@ -330,8 +330,12 @@ export async function discoverMavenModules(workspaceRoot, opts = {}) {
 		return []
 	}
 
-	const localWrapper = 'mvnw' + (process.platform === 'win32' ? '.cmd' : '')
-	const mvnBin = resolveBinary('mvn', localWrapper, root, opts)
+	let mvnBin
+	try {
+		mvnBin = new Java_maven().selectToolBinary(rootPom, opts)
+	} catch {
+		return [rootPom]
+	}
 	const visited = new Set()
 	const manifestPaths = [rootPom]
 
