@@ -140,6 +140,17 @@ export function getGitRootDir(cwd) {
 }
 
 /**
+ * Normalize a filesystem path, lowercasing on Windows for case-insensitive comparison.
+ *
+ * @param {string} thePath
+ * @returns {string}
+ */
+export function normalizePath(thePath) {
+	const normalized = path.resolve(thePath).normalize()
+	return process.platform === 'win32' ? normalized.toLowerCase() : normalized
+}
+
+/**
  * Walk up from `startDir` to `repoRoot` looking for an executable wrapper script.
  *
  * @param {string} startDir - Absolute directory to start from
@@ -148,7 +159,7 @@ export function getGitRootDir(cwd) {
  * @returns {string | undefined}
  */
 export function traverseForWrapper(startDir, wrapperName, repoRoot = undefined) {
-	const currentDir = path.resolve(startDir)
+	const currentDir = normalizePath(startDir)
 	repoRoot = repoRoot || getGitRootDir(currentDir) || path.parse(currentDir).root
 	const wrapperPath = path.join(currentDir, wrapperName)
 	try {

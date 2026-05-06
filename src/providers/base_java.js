@@ -144,7 +144,6 @@ export default class Base_Java {
 
 		const useWrapper = getWrapperPreference(this.globalBinary, opts)
 		if (useWrapper) {
-			const manifestDir = path.dirname(this.normalizePath(manifestPath))
 			const wrapper = traverseForWrapper(manifestDir, this.localWrapper)
 			if (wrapper !== undefined) {
 				try {
@@ -168,8 +167,4 @@ export default class Base_Java {
 		return toolPath
 	}
 
-	normalizePath(thePath) {
-		const normalized = path.resolve(thePath).normalize();
-		return process.platform === 'win32' ? normalized.toLowerCase() : normalized;
-	}
 }
