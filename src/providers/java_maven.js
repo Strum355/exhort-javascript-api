@@ -7,7 +7,7 @@ import { XMLParser } from 'fast-xml-parser'
 
 import { getLicense } from '../license/license_utils.js'
 import Sbom from '../sbom.js'
-import { getCustom, getCustomPath, getWrapperPreference, invokeCommand, traverseForWrapper } from '../tools.js'
+import { getCustom, invokeCommand, resolveBinary } from '../tools.js'
 import { filterManifestPathsByDiscoveryIgnore, resolveWorkspaceDiscoveryIgnore } from '../workspace.js'
 
 import Base_java, { ecosystem_maven } from "./base_java.js";
@@ -316,25 +316,6 @@ const DEFAULT_MAVEN_DISCOVERY_IGNORE = [
 ]
 
 /**
- * Resolve the Maven binary, respecting wrapper preference.
- *
- * @param {string} startDir - Directory from which to start the wrapper search
- * @param {object} [opts={}]
- * @returns {string} Path to the Maven binary
- */
-function resolveMavenBinary(startDir, opts = {}) {
-	const localWrapper = 'mvnw' + (process.platform === 'win32' ? '.cmd' : '')
-	const useWrapper = getWrapperPreference('mvn', opts)
-	if (useWrapper) {
-		const wrapper = traverseForWrapper(startDir, localWrapper)
-		if (wrapper !== undefined) {
-			return wrapper
-		}
-	}
-	return getCustomPath('mvn', opts)
-}
-
-/**
  * Discover all pom.xml manifest paths in a Maven multi-module project.
  *
  * @param {string} workspaceRoot - Absolute or relative path to workspace root (must contain pom.xml)
@@ -349,7 +330,8 @@ export async function discoverMavenModules(workspaceRoot, opts = {}) {
 		return []
 	}
 
-	const mvnBin = resolveMavenBinary(root, opts)
+	const localWrapper = 'mvnw' + (process.platform === 'win32' ? '.cmd' : '')
+	const mvnBin = resolveBinary('mvn', localWrapper, root, opts)
 	const visited = new Set()
 	const manifestPaths = [rootPom]
 

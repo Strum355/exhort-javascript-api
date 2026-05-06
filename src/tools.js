@@ -178,6 +178,25 @@ export function traverseForWrapper(startDir, wrapperName, repoRoot = undefined) 
 	}
 }
 
+/**
+ * Resolve a build-tool binary, preferring a wrapper when configured.
+ *
+ * @param {string} globalBinary - Global binary name (e.g. `mvn`, `gradle`)
+ * @param {string} localWrapper - Wrapper filename (e.g. `mvnw`, `gradlew.bat`)
+ * @param {string} startDir - Directory from which to start the wrapper search
+ * @param {import('./index.js').Options} [opts={}]
+ * @returns {string} Path to the resolved binary
+ */
+export function resolveBinary(globalBinary, localWrapper, startDir, opts = {}) {
+	if (getWrapperPreference(globalBinary, opts)) {
+		const wrapper = traverseForWrapper(startDir, localWrapper)
+		if (wrapper !== undefined) {
+			return wrapper
+		}
+	}
+	return getCustomPath(globalBinary, opts)
+}
+
 /** this method invokes command string in a process in a synchronous way.
  * @param {string} bin - the command to be invoked
  * @param {Array<string>} args - the args to pass to the binary
