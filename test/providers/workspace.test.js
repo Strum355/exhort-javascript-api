@@ -332,20 +332,6 @@ suite('discoverGoWorkspaceModules', () => {
 
 	test('discovers modules from go.work with two modules', async () => {
 		const root = path.resolve('test/providers/tst_manifests/golang/go_workspace')
-		const goWorkJson = {
-			Go: { Version: '1.22' },
-			Use: [
-				{ DiskPath: './module-a' },
-				{ DiskPath: './module-b' },
-			],
-		}
-		const { discoverGoWorkspaceModules } = await esmock('../../src/providers/golang_gomodules.js', {
-			'../../src/tools.js': {
-				getCustom: () => null,
-				getCustomPath: () => 'go',
-				invokeCommand: () => Buffer.from(JSON.stringify(goWorkJson)),
-			},
-		})
 		const result = await discoverGoWorkspaceModules(root)
 		expect(result).to.be.an('array')
 		expect(result).to.have.lengthOf(2)
@@ -356,20 +342,6 @@ suite('discoverGoWorkspaceModules', () => {
 
 	test('discovers modules from nested directories', async () => {
 		const root = path.resolve('test/providers/tst_manifests/golang/go_workspace_nested')
-		const goWorkJson = {
-			Go: { Version: '1.22' },
-			Use: [
-				{ DiskPath: './libs/core' },
-				{ DiskPath: './libs/util' },
-			],
-		}
-		const { discoverGoWorkspaceModules } = await esmock('../../src/providers/golang_gomodules.js', {
-			'../../src/tools.js': {
-				getCustom: () => null,
-				getCustomPath: () => 'go',
-				invokeCommand: () => Buffer.from(JSON.stringify(goWorkJson)),
-			},
-		})
 		const result = await discoverGoWorkspaceModules(root)
 		expect(result).to.have.lengthOf(2)
 		expect(result.some(p => p.includes(path.join('libs', 'core', 'go.mod')))).to.be.true
@@ -378,17 +350,6 @@ suite('discoverGoWorkspaceModules', () => {
 
 	test('discovers single module', async () => {
 		const root = path.resolve('test/providers/tst_manifests/golang/go_workspace_single')
-		const goWorkJson = {
-			Go: { Version: '1.22' },
-			Use: [{ DiskPath: './mymod' }],
-		}
-		const { discoverGoWorkspaceModules } = await esmock('../../src/providers/golang_gomodules.js', {
-			'../../src/tools.js': {
-				getCustom: () => null,
-				getCustomPath: () => 'go',
-				invokeCommand: () => Buffer.from(JSON.stringify(goWorkJson)),
-			},
-		})
 		const result = await discoverGoWorkspaceModules(root)
 		expect(result).to.have.lengthOf(1)
 		expect(result[0]).to.include(path.join('mymod', 'go.mod'))
@@ -396,20 +357,6 @@ suite('discoverGoWorkspaceModules', () => {
 
 	test('skips modules whose directory does not exist', async () => {
 		const root = path.resolve('test/providers/tst_manifests/golang/go_workspace_missing_module')
-		const goWorkJson = {
-			Go: { Version: '1.22' },
-			Use: [
-				{ DiskPath: './existing' },
-				{ DiskPath: './nonexistent' },
-			],
-		}
-		const { discoverGoWorkspaceModules } = await esmock('../../src/providers/golang_gomodules.js', {
-			'../../src/tools.js': {
-				getCustom: () => null,
-				getCustomPath: () => 'go',
-				invokeCommand: () => Buffer.from(JSON.stringify(goWorkJson)),
-			},
-		})
 		const result = await discoverGoWorkspaceModules(root)
 		expect(result).to.have.lengthOf(1)
 		expect(result[0]).to.include(path.join('existing', 'go.mod'))
@@ -417,60 +364,38 @@ suite('discoverGoWorkspaceModules', () => {
 
 	test('returns empty when go command fails', async () => {
 		const root = path.resolve('test/providers/tst_manifests/golang/go_workspace')
-		const { discoverGoWorkspaceModules } = await esmock('../../src/providers/golang_gomodules.js', {
+		const { discoverGoWorkspaceModules: discoverMocked } = await esmock('../../src/providers/golang_gomodules.js', {
 			'../../src/tools.js': {
 				getCustom: () => null,
 				getCustomPath: () => 'go',
 				invokeCommand: () => { throw new Error('go not found') },
 			},
 		})
-		const result = await discoverGoWorkspaceModules(root)
+		const result = await discoverMocked(root)
 		expect(result).to.have.lengthOf(0)
 	})
 
 	test('returns empty when go output is invalid JSON', async () => {
 		const root = path.resolve('test/providers/tst_manifests/golang/go_workspace')
-		const { discoverGoWorkspaceModules } = await esmock('../../src/providers/golang_gomodules.js', {
+		const { discoverGoWorkspaceModules: discoverMocked } = await esmock('../../src/providers/golang_gomodules.js', {
 			'../../src/tools.js': {
 				getCustom: () => null,
 				getCustomPath: () => 'go',
 				invokeCommand: () => Buffer.from('not json'),
 			},
 		})
-		const result = await discoverGoWorkspaceModules(root)
+		const result = await discoverMocked(root)
 		expect(result).to.have.lengthOf(0)
 	})
 
-	test('returns empty when Use array is empty', async () => {
-		const root = path.resolve('test/providers/tst_manifests/golang/go_workspace')
-		const goWorkJson = { Go: { Version: '1.22' }, Use: [] }
-		const { discoverGoWorkspaceModules } = await esmock('../../src/providers/golang_gomodules.js', {
-			'../../src/tools.js': {
-				getCustom: () => null,
-				getCustomPath: () => 'go',
-				invokeCommand: () => Buffer.from(JSON.stringify(goWorkJson)),
-			},
-		})
+	test('returns empty when Use is null (no use directives)', async () => {
+		const root = path.resolve('test/providers/tst_manifests/golang/go_workspace_empty')
 		const result = await discoverGoWorkspaceModules(root)
 		expect(result).to.have.lengthOf(0)
 	})
 
 	test('applies ignore patterns to discovered modules', async () => {
 		const root = path.resolve('test/providers/tst_manifests/golang/go_workspace_nested')
-		const goWorkJson = {
-			Go: { Version: '1.22' },
-			Use: [
-				{ DiskPath: './libs/core' },
-				{ DiskPath: './libs/util' },
-			],
-		}
-		const { discoverGoWorkspaceModules } = await esmock('../../src/providers/golang_gomodules.js', {
-			'../../src/tools.js': {
-				getCustom: () => null,
-				getCustomPath: () => 'go',
-				invokeCommand: () => Buffer.from(JSON.stringify(goWorkJson)),
-			},
-		})
 		const result = await discoverGoWorkspaceModules(root, {
 			workspaceDiscoveryIgnore: ['**/util/**'],
 		})
