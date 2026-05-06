@@ -8,7 +8,7 @@ import TOML from 'fast-toml'
 
 import { readLicenseFile } from '../license/license_utils.js'
 import Sbom from '../sbom.js'
-import { invokeCommand, resolveBinary } from '../tools.js'
+import { invokeCommand } from '../tools.js'
 import { filterManifestPathsByDiscoveryIgnore, resolveWorkspaceDiscoveryIgnore } from '../workspace.js'
 
 import Base_java, { ecosystem_gradle } from "./base_java.js";
@@ -503,16 +503,21 @@ export async function discoverGradleSubprojects(workspaceRoot, opts = {}) {
 		return []
 	}
 
-	const localWrapper = 'gradlew' + (process.platform === 'win32' ? '.bat' : '')
-	const gradleBin = resolveBinary('gradle', localWrapper, root, opts)
 	const manifestPaths = []
 
 	const rootBuildKts = path.join(root, 'build.gradle.kts')
 	const rootBuild = path.join(root, 'build.gradle')
-	if (fs.existsSync(rootBuildKts)) {
-		manifestPaths.push(rootBuildKts)
-	} else if (fs.existsSync(rootBuild)) {
-		manifestPaths.push(rootBuild)
+	const rootManifest = fs.existsSync(rootBuildKts) ? rootBuildKts : fs.existsSync(rootBuild) ? rootBuild : null
+	if (rootManifest) {
+		manifestPaths.push(rootManifest)
+	}
+
+	let gradleBin
+	try {
+		gradleBin = new Java_gradle().selectToolBinary(rootManifest || rootBuild, opts)
+	} catch {
+		const ignorePatterns = [...resolveWorkspaceDiscoveryIgnore(opts), ...DEFAULT_GRADLE_DISCOVERY_IGNORE]
+		return filterManifestPathsByDiscoveryIgnore(manifestPaths, root, ignorePatterns)
 	}
 
 	const initScriptPath = path.join(os.tmpdir(), `da-list-projects-${crypto.randomUUID()}.gradle`)

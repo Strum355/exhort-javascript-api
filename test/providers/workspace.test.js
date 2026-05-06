@@ -200,18 +200,6 @@ suite('discoverGradleSubprojects', () => {
 
 	test('discovers multi-project build', async () => {
 		const root = path.resolve('test/providers/tst_manifests/gradle/gradle_multi_project')
-		const initScriptOutput = [
-			`::DA_PROJECT:::${path.resolve(root)}`,
-			`::DA_PROJECT:::app::${path.resolve(root, 'app')}`,
-			`::DA_PROJECT:::lib::${path.resolve(root, 'lib')}`,
-		].join('\n')
-
-		const { discoverGradleSubprojects } = await esmock('../../src/providers/java_gradle.js', {
-			'../../src/tools.js': {
-				resolveBinary: () => 'gradle',
-				invokeCommand: () => Buffer.from(initScriptOutput),
-			},
-		})
 		const result = await discoverGradleSubprojects(root)
 		expect(result).to.be.an('array')
 		expect(result).to.have.lengthOf(3)
@@ -222,18 +210,6 @@ suite('discoverGradleSubprojects', () => {
 
 	test('discovers nested subprojects', async () => {
 		const root = path.resolve('test/providers/tst_manifests/gradle/gradle_nested_subprojects')
-		const initScriptOutput = [
-			`::DA_PROJECT:::${path.resolve(root)}`,
-			`::DA_PROJECT:::libs:core::${path.resolve(root, 'libs/core')}`,
-			`::DA_PROJECT:::libs:util::${path.resolve(root, 'libs/util')}`,
-		].join('\n')
-
-		const { discoverGradleSubprojects } = await esmock('../../src/providers/java_gradle.js', {
-			'../../src/tools.js': {
-				resolveBinary: () => 'gradle',
-				invokeCommand: () => Buffer.from(initScriptOutput),
-			},
-		})
 		const result = await discoverGradleSubprojects(root)
 		expect(result).to.be.an('array')
 		expect(result).to.have.lengthOf(3)
@@ -244,18 +220,6 @@ suite('discoverGradleSubprojects', () => {
 
 	test('handles mixed Groovy and Kotlin build files', async () => {
 		const root = path.resolve('test/providers/tst_manifests/gradle/gradle_mixed_variants')
-		const initScriptOutput = [
-			`::DA_PROJECT:::${path.resolve(root)}`,
-			`::DA_PROJECT:::app::${path.resolve(root, 'app')}`,
-			`::DA_PROJECT:::lib::${path.resolve(root, 'lib')}`,
-		].join('\n')
-
-		const { discoverGradleSubprojects } = await esmock('../../src/providers/java_gradle.js', {
-			'../../src/tools.js': {
-				resolveBinary: () => 'gradle',
-				invokeCommand: () => Buffer.from(initScriptOutput),
-			},
-		})
 		const result = await discoverGradleSubprojects(root)
 		expect(result).to.be.an('array')
 		expect(result).to.have.lengthOf(3)
@@ -266,29 +230,22 @@ suite('discoverGradleSubprojects', () => {
 
 	test('returns root only when no subprojects', async () => {
 		const root = path.resolve('test/providers/tst_manifests/gradle/gradle_no_subprojects')
-		const initScriptOutput = `::DA_PROJECT:::${path.resolve(root)}\n`
-
-		const { discoverGradleSubprojects } = await esmock('../../src/providers/java_gradle.js', {
-			'../../src/tools.js': {
-				resolveBinary: () => 'gradle',
-				invokeCommand: () => Buffer.from(initScriptOutput),
-			},
-		})
 		const result = await discoverGradleSubprojects(root)
 		expect(result).to.be.an('array')
 		expect(result).to.have.lengthOf(1)
 		expect(result[0]).to.equal(path.join(root, 'build.gradle'))
 	})
 
-	test('returns root build file when gradle command fails', async () => {
+	test('returns root build file when gradle is not available', async () => {
 		const root = path.resolve('test/providers/tst_manifests/gradle/gradle_multi_project')
-		const { discoverGradleSubprojects } = await esmock('../../src/providers/java_gradle.js', {
+		const { discoverGradleSubprojects: discoverMocked } = await esmock('../../src/providers/java_gradle.js', {
 			'../../src/tools.js': {
-				resolveBinary: () => 'gradle',
-				invokeCommand: () => { throw new Error('gradle not found') },
+				getCustomPath: () => '/nonexistent/gradle',
+				getWrapperPreference: () => false,
+				invokeCommand: () => { throw Object.assign(new Error('gradle not found'), { code: 'ENOENT' }) },
 			},
 		})
-		const result = await discoverGradleSubprojects(root)
+		const result = await discoverMocked(root)
 		expect(result).to.be.an('array')
 		expect(result).to.have.lengthOf(1)
 		expect(result[0]).to.equal(path.join(root, 'build.gradle'))
@@ -296,18 +253,6 @@ suite('discoverGradleSubprojects', () => {
 
 	test('excludes paths matching workspaceDiscoveryIgnore', async () => {
 		const root = path.resolve('test/providers/tst_manifests/gradle/gradle_multi_project')
-		const initScriptOutput = [
-			`::DA_PROJECT:::${path.resolve(root)}`,
-			`::DA_PROJECT:::app::${path.resolve(root, 'app')}`,
-			`::DA_PROJECT:::lib::${path.resolve(root, 'lib')}`,
-		].join('\n')
-
-		const { discoverGradleSubprojects } = await esmock('../../src/providers/java_gradle.js', {
-			'../../src/tools.js': {
-				resolveBinary: () => 'gradle',
-				invokeCommand: () => Buffer.from(initScriptOutput),
-			},
-		})
 		const result = await discoverGradleSubprojects(root, {
 			workspaceDiscoveryIgnore: ['**/lib/**'],
 		})
