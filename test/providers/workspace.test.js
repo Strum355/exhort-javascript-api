@@ -229,22 +229,17 @@ suite('discoverMavenModules', function () {
 
 	test('returns root pom when mvn is not available', async () => {
 		const root = path.resolve('test/providers/tst_manifests/maven/maven_multi_module')
-		const saved = process.env.TRUSTIFY_DA_MVN_PATH
-		try {
-			process.env.TRUSTIFY_DA_MVN_PATH = '/nonexistent/mvn'
-			process.env.TRUSTIFY_DA_PREFER_MVNW = 'false'
-			const result = await discoverMavenModules(root)
-			expect(result).to.be.an('array')
-			expect(result).to.have.lengthOf(1)
-			expect(result[0]).to.equal(path.join(root, 'pom.xml'))
-		} finally {
-			if (saved !== undefined) {
-				process.env.TRUSTIFY_DA_MVN_PATH = saved
-			} else {
-				delete process.env.TRUSTIFY_DA_MVN_PATH
-			}
-			delete process.env.TRUSTIFY_DA_PREFER_MVNW
-		}
+		const { discoverMavenModules: discoverMocked } = await esmock('../../src/providers/java_maven.js', {
+			'../../src/tools.js': {
+				getCustomPath: () => '/nonexistent/mvn',
+				getWrapperPreference: () => false,
+				invokeCommand: () => { throw Object.assign(new Error('mvn not found'), { code: 'ENOENT' }) },
+			},
+		})
+		const result = await discoverMocked(root)
+		expect(result).to.be.an('array')
+		expect(result).to.have.lengthOf(1)
+		expect(result[0]).to.equal(path.join(root, 'pom.xml'))
 	})
 
 	test('excludes paths matching workspaceDiscoveryIgnore', async () => {
