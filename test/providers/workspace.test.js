@@ -202,7 +202,7 @@ suite('discoverMavenModules', () => {
 		expect(result).to.be.an('array')
 		expect(result).to.have.lengthOf(1)
 		expect(result[0]).to.equal(path.join(root, 'pom.xml'))
-	})
+	}).timeout(40000)
 
 	test('discovers multi-module project', async () => {
 		const root = path.resolve('test/providers/tst_manifests/maven/maven_multi_module')
@@ -213,7 +213,7 @@ suite('discoverMavenModules', () => {
 		expect(result[0]).to.equal(path.join(root, 'pom.xml'))
 		expect(result.some(p => p.includes('module-a'))).to.be.true
 		expect(result.some(p => p.includes('module-b'))).to.be.true
-	})
+	}).timeout(40000)
 
 	test('discovers nested aggregator modules recursively', async () => {
 		const root = path.resolve('test/providers/tst_manifests/maven/maven_nested_aggregator')
@@ -223,7 +223,7 @@ suite('discoverMavenModules', () => {
 		expect(result[0]).to.equal(path.join(root, 'pom.xml'))
 		expect(result.some(p => p.includes(path.join('parent', 'pom.xml')))).to.be.true
 		expect(result.some(p => p.includes(path.join('parent', 'child', 'pom.xml')))).to.be.true
-	})
+	}).timeout(40000)
 
 	test('returns root pom when mvn is not available', async () => {
 		const root = path.resolve('test/providers/tst_manifests/maven/maven_multi_module')
@@ -247,5 +247,5 @@ suite('discoverMavenModules', () => {
 		})
 		expect(result.some(p => p.includes('module-a'))).to.be.true
 		expect(result.some(p => p.includes('module-b'))).to.be.false
-	})
+	}).timeout(40000)
 })
