@@ -390,20 +390,23 @@ function listMavenModules(dir, mvnBin) {
 	}
 
 	const raw = output.toString().trim()
-	if (!raw || raw === 'null') {
+	if (!raw || raw.startsWith('<modules')) {
 		return []
 	}
 	return parseMavenModuleList(raw)
 }
 
 /**
- * @param {string} raw - Raw stdout from mvn (e.g. `[module-a, module-b]`)
+ * @param {string} raw - Raw stdout from mvn help:evaluate -DforceStdout
  * @returns {string[]}
  */
 function parseMavenModuleList(raw) {
-	const match = raw.match(/^\[(.+)]$/)
-	if (!match) {
-		return []
+	const modules = []
+	const re = /<string>(.+?)<\/string>/g
+	let m
+	while ((m = re.exec(raw)) !== null) {
+		const val = m[1].trim()
+		if (val) modules.push(val)
 	}
-	return match[1].split(',').map(s => s.trim()).filter(Boolean)
+	return modules
 }

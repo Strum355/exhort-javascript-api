@@ -189,7 +189,9 @@ suite('discoverWorkspaceCrates', () => {
 	})
 })
 
-suite('discoverMavenModules', () => {
+suite('discoverMavenModules', function () {
+	this.timeout(60_000)
+
 	test('returns empty when no pom.xml at root', async () => {
 		const result = await discoverMavenModules('test/providers/tst_manifests/npm')
 		expect(result).to.be.an('array')
@@ -198,15 +200,6 @@ suite('discoverMavenModules', () => {
 
 	test('returns root pom only when mvn reports no modules', async () => {
 		const root = path.resolve('test/providers/tst_manifests/maven/maven_no_modules')
-		const { discoverMavenModules } = await esmock('../../src/providers/java_maven.js', {
-			'../../src/tools.js': {
-				getCustom: () => null,
-				getCustomPath: () => 'mvn',
-				getGitRootDir: () => null,
-				getWrapperPreference: () => false,
-				invokeCommand: () => Buffer.from('null'),
-			},
-		})
 		const result = await discoverMavenModules(root)
 		expect(result).to.be.an('array')
 		expect(result).to.have.lengthOf(1)
@@ -215,24 +208,6 @@ suite('discoverMavenModules', () => {
 
 	test('discovers multi-module project', async () => {
 		const root = path.resolve('test/providers/tst_manifests/maven/maven_multi_module')
-		const { discoverMavenModules } = await esmock('../../src/providers/java_maven.js', {
-			'../../src/tools.js': {
-				getCustom: () => null,
-				getCustomPath: () => 'mvn',
-				getGitRootDir: () => null,
-				getWrapperPreference: () => false,
-				invokeCommand: (bin, args) => {
-					const pomArg = args.find((a, i) => args[i - 1] === '-f')
-					if (pomArg && pomArg.includes('module-a')) {
-						return Buffer.from('null')
-					}
-					if (pomArg && pomArg.includes('module-b')) {
-						return Buffer.from('null')
-					}
-					return Buffer.from('[module-a, module-b]')
-				},
-			},
-		})
 		const result = await discoverMavenModules(root)
 		expect(result).to.be.an('array')
 		expect(result).to.have.lengthOf(3)
@@ -244,24 +219,6 @@ suite('discoverMavenModules', () => {
 
 	test('discovers nested aggregator modules recursively', async () => {
 		const root = path.resolve('test/providers/tst_manifests/maven/maven_nested_aggregator')
-		const { discoverMavenModules } = await esmock('../../src/providers/java_maven.js', {
-			'../../src/tools.js': {
-				getCustom: () => null,
-				getCustomPath: () => 'mvn',
-				getGitRootDir: () => null,
-				getWrapperPreference: () => false,
-				invokeCommand: (bin, args) => {
-					const pomArg = args.find((a, i) => args[i - 1] === '-f')
-					if (pomArg && pomArg.endsWith(path.join('parent', 'child', 'pom.xml'))) {
-						return Buffer.from('null')
-					}
-					if (pomArg && pomArg.endsWith(path.join('parent', 'pom.xml'))) {
-						return Buffer.from('[child]')
-					}
-					return Buffer.from('[parent]')
-				},
-			},
-		})
 		const result = await discoverMavenModules(root)
 		expect(result).to.be.an('array')
 		expect(result).to.have.lengthOf(3)
@@ -270,40 +227,28 @@ suite('discoverMavenModules', () => {
 		expect(result.some(p => p.includes(path.join('parent', 'child', 'pom.xml')))).to.be.true
 	})
 
-	test('returns root pom when mvn command fails', async () => {
+	test('returns root pom when mvn is not available', async () => {
 		const root = path.resolve('test/providers/tst_manifests/maven/maven_multi_module')
-		const { discoverMavenModules } = await esmock('../../src/providers/java_maven.js', {
-			'../../src/tools.js': {
-				getCustom: () => null,
-				getCustomPath: () => 'mvn',
-				getGitRootDir: () => null,
-				getWrapperPreference: () => false,
-				invokeCommand: () => { throw new Error('mvn not found') },
-			},
-		})
-		const result = await discoverMavenModules(root)
-		expect(result).to.be.an('array')
-		expect(result).to.have.lengthOf(1)
-		expect(result[0]).to.equal(path.join(root, 'pom.xml'))
+		const saved = process.env.TRUSTIFY_DA_MVN_PATH
+		try {
+			process.env.TRUSTIFY_DA_MVN_PATH = '/nonexistent/mvn'
+			process.env.TRUSTIFY_DA_PREFER_MVNW = 'false'
+			const result = await discoverMavenModules(root)
+			expect(result).to.be.an('array')
+			expect(result).to.have.lengthOf(1)
+			expect(result[0]).to.equal(path.join(root, 'pom.xml'))
+		} finally {
+			if (saved !== undefined) {
+				process.env.TRUSTIFY_DA_MVN_PATH = saved
+			} else {
+				delete process.env.TRUSTIFY_DA_MVN_PATH
+			}
+			delete process.env.TRUSTIFY_DA_PREFER_MVNW
+		}
 	})
 
 	test('excludes paths matching workspaceDiscoveryIgnore', async () => {
 		const root = path.resolve('test/providers/tst_manifests/maven/maven_multi_module')
-		const { discoverMavenModules } = await esmock('../../src/providers/java_maven.js', {
-			'../../src/tools.js': {
-				getCustom: () => null,
-				getCustomPath: () => 'mvn',
-				getGitRootDir: () => null,
-				getWrapperPreference: () => false,
-				invokeCommand: (bin, args) => {
-					const pomArg = args.find((a, i) => args[i - 1] === '-f')
-					if (pomArg && (pomArg.includes('module-a') || pomArg.includes('module-b'))) {
-						return Buffer.from('null')
-					}
-					return Buffer.from('[module-a, module-b]')
-				},
-			},
-		})
 		const result = await discoverMavenModules(root, {
 			workspaceDiscoveryIgnore: ['**/module-b/**'],
 		})
