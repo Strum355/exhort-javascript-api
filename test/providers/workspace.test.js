@@ -189,9 +189,7 @@ suite('discoverWorkspaceCrates', () => {
 	})
 })
 
-suite('discoverMavenModules', function () {
-	this.timeout(60_000)
-
+suite('discoverMavenModules', () => {
 	test('returns empty when no pom.xml at root', async () => {
 		const result = await discoverMavenModules('test/providers/tst_manifests/npm')
 		expect(result).to.be.an('array')

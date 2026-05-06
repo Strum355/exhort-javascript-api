@@ -401,12 +401,10 @@ function listMavenModules(dir, mvnBin) {
  * @returns {string[]}
  */
 function parseMavenModuleList(raw) {
-	const modules = []
-	const re = /<string>(.+?)<\/string>/g
-	let m
-	while ((m = re.exec(raw)) !== null) {
-		const val = m[1].trim()
-		if (val) modules.push(val)
-	}
-	return modules
+	const parser = new XMLParser()
+	const parsed = parser.parse(raw)
+	const entries = parsed?.strings?.string
+	if (!entries) { return [] }
+	const list = Array.isArray(entries) ? entries : [entries]
+	return list.map(s => String(s).trim()).filter(Boolean)
 }
