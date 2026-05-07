@@ -184,7 +184,7 @@ function parsePnpmPackages(content) {
  * @param {string} manifestFileName - e.g. 'package.json' or 'Cargo.toml'
  * @returns {string[]}
  */
-function toManifestGlobPatterns(patterns, manifestFileName) {
+export function toManifestGlobPatterns(patterns, manifestFileName) {
 	return patterns.map(p => {
 		if (p.startsWith('!')) {
 			return `!${p.slice(1)}/${manifestFileName}`

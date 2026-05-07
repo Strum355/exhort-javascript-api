@@ -5,7 +5,7 @@ import fg from 'fast-glob'
 import { parse as parseToml } from 'smol-toml'
 
 import { environmentVariableIsPopulated, getCustomPath, invokeCommand } from '../tools.js'
-import { filterManifestPathsByDiscoveryIgnore, resolveWorkspaceDiscoveryIgnore } from '../workspace.js'
+import { filterManifestPathsByDiscoveryIgnore, resolveWorkspaceDiscoveryIgnore, toManifestGlobPatterns } from '../workspace.js'
 
 import Base_pyproject from './base_pyproject.js'
 import { evaluateMarker } from './marker_evaluator.js'
@@ -184,23 +184,6 @@ const DEFAULT_UV_DISCOVERY_IGNORE = [
 	'**/__pycache__/**',
 	'**/.venv/**',
 ]
-
-/**
- * Convert workspace glob patterns to manifest-file glob patterns,
- * correctly handling negation prefixes.
- *
- * @param {string[]} patterns - Workspace glob patterns (may include negations)
- * @param {string} manifestFileName - e.g. 'pyproject.toml'
- * @returns {string[]}
- */
-function toManifestGlobPatterns(patterns, manifestFileName) {
-	return patterns.map(p => {
-		if (p.startsWith('!')) {
-			return `!${p.slice(1)}/${manifestFileName}`
-		}
-		return `${p}/${manifestFileName}`
-	})
-}
 
 /**
  * Discover all pyproject.toml manifest paths in a uv workspace.
