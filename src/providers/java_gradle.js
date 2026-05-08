@@ -4,7 +4,7 @@ import os from 'node:os'
 import path from 'node:path'
 import { EOL } from 'os'
 
-import TOML from 'fast-toml'
+import { parse as parseToml } from 'smol-toml'
 
 import { readLicenseFile } from '../license/license_utils.js'
 import Sbom from '../sbom.js'
@@ -422,7 +422,7 @@ export default class Java_gradle extends Base_java {
 		// Read and parse the TOML file
 		let pathOfToml = path.join(path.dirname(manifestPath),"gradle","libs.versions.toml");
 		const tomlString = fs.readFileSync(pathOfToml).toString()
-		let tomlObject = TOML.parse(tomlString)
+		let tomlObject = parseToml(tomlString)
 		let groupPlusArtifactObject = tomlObject.libraries[alias]
 		let parts = groupPlusArtifactObject.module.split(":");
 		let groupId = parts[0]
