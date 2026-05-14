@@ -4,6 +4,7 @@ import golangGomodulesProvider from './providers/golang_gomodules.js'
 import Java_gradle_groovy from "./providers/java_gradle_groovy.js";
 import Java_gradle_kotlin from "./providers/java_gradle_kotlin.js";
 import Java_maven from "./providers/java_maven.js";
+import Javascript_bun from './providers/javascript_bun.js';
 import Javascript_npm from './providers/javascript_npm.js';
 import Javascript_pnpm from './providers/javascript_pnpm.js';
 import Javascript_yarn from './providers/javascript_yarn.js';
@@ -24,6 +25,7 @@ export const availableProviders = [
 	new Java_maven(),
 	new Java_gradle_groovy(),
 	new Java_gradle_kotlin(),
+	new Javascript_bun(),
 	new Javascript_pnpm(),
 	new Javascript_yarn(),
 	new Javascript_npm(),

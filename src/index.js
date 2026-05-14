@@ -370,7 +370,8 @@ async function detectWorkspaceManifests(root, opts) {
 		}
 	}
 
-	const hasJsLock = fs.existsSync(path.join(root, 'pnpm-lock.yaml'))
+	const hasJsLock = fs.existsSync(path.join(root, 'bun.lock'))
+		|| fs.existsSync(path.join(root, 'pnpm-lock.yaml'))
 		|| fs.existsSync(path.join(root, 'yarn.lock'))
 		|| fs.existsSync(path.join(root, 'package-lock.json'))
 

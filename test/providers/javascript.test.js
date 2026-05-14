@@ -45,6 +45,10 @@ async function createMockProvider(providerName, listingOutput) {
 		const Javascript_yarn = await mockProvider('yarn', listingOutput, '4.9.1');
 		return new Javascript_yarn();
 	}
+	case 'bun': {
+		const Javascript_bun = await mockProvider(providerName, listingOutput);
+		return new Javascript_bun();
+	}
 	default: { fail('Not implemented'); }
 	}
 }
@@ -60,7 +64,11 @@ suite('testing the javascript-npm data provider', async () => {
 		{ name: 'yarn-classic/with_lock_file', validation: true },
 		{ name: 'yarn-classic/without_lock_file', validation: false },
 		{ name: 'yarn-berry/with_lock_file', validation: true },
-		{ name: 'yarn-berry/without_lock_file', validation: false }
+		{ name: 'yarn-berry/without_lock_file', validation: false },
+		{ name: 'bun/with_lock_file', validation: true },
+		{ name: 'bun/without_lock_file', validation: false },
+		{ name: 'bun/workspace_member_with_lock/packages/module-a', validation: true },
+		{ name: 'bun/workspace_member_without_lock/packages/module-a', validation: false }
 	].forEach(testCase => {
 		test(`verify isSupported returns ${testCase.expected} for ${testCase.name}`, () => {
 			let manifest = `test/providers/provider_manifests/${testCase.name}/package.json`;
@@ -192,6 +200,35 @@ suite('testing the javascript-npm data provider', async () => {
 		}).timeout(15000);
 	});
 
+	['bun'].flatMap(providerName => [
+		{ testCase: "package_json_deps_without_exhortignore_object", manifest: "package.json" },
+		{ testCase: "package_json_deps_with_exhortignore_object", manifest: "package.json" },
+		{ testCase: "package_json_deps_with_mixed_dep_types", manifest: "package.json" },
+		{ testCase: "workspace_member", manifest: "packages/member-a/package.json" },
+	].map(tc => ({ providerName, ...tc }))).forEach(({ providerName, testCase, manifest }) => {
+		let scenario = testCase.replace('package_json_deps_', '').replaceAll('_', ' ')
+		test(`verify package.json data provided for ${providerName} - stack analysis - ${scenario}`, async () => {
+			let expectedSbom = fs.readFileSync(`test/providers/tst_manifests/${providerName}/${testCase}/stack_expected_sbom.json`).toString();
+
+			const provider = await createMockProvider(providerName, '');
+			const manifestPath = `test/providers/tst_manifests/${providerName}/${testCase}/${manifest}`;
+			let providedDataForStack = provider.provideStack(manifestPath);
+
+			compareSboms(providedDataForStack.content, expectedSbom);
+
+		}).timeout(30000);
+		test(`verify package.json data provided for ${providerName} - component analysis - ${scenario}`, async () => {
+			let expectedSbom = fs.readFileSync(`test/providers/tst_manifests/${providerName}/${testCase}/component_expected_sbom.json`).toString().trim();
+
+			const provider = await createMockProvider(providerName, '');
+			const manifestPath = `test/providers/tst_manifests/${providerName}/${testCase}/${manifest}`;
+			let providedDataForComponent = provider.provideComponent(manifestPath);
+
+			compareSboms(providedDataForComponent.content, expectedSbom);
+		}).timeout(15000)
+
+	});
+
 	test('loads a valid manifest with ignored dependencies', () => {
 		const testCase = 'package_json_deps_with_exhortignore_object';
 		const manifestPath = `test/providers/tst_manifests/npm/${testCase}/package.json`;
@@ -302,6 +339,34 @@ suite('testing the javascript-npm data provider', async () => {
 	test('verify match with wrong TRUSTIFY_DA_WORKSPACE_DIR fails even when walk-up would succeed', () => {
 		const manifest = 'test/providers/provider_manifests/npm/workspace_member_with_lock/packages/module-a/package.json'
 		const opts = { TRUSTIFY_DA_WORKSPACE_DIR: 'test/providers/provider_manifests/npm/workspace_member_without_lock' }
+		expect(() => match(manifest, availableProviders, opts))
+			.to.throw('package.json requires a lock file')
+	})
+
+	test('verify match with opts.TRUSTIFY_DA_WORKSPACE_DIR finds bun provider when lock is at workspace root', () => {
+		const manifest = 'test/providers/provider_manifests/bun/with_lock_file/package.json'
+		const opts = { TRUSTIFY_DA_WORKSPACE_DIR: 'test/providers/provider_manifests/bun/with_lock_file' }
+		const provider = match(manifest, availableProviders, opts)
+		expect(provider).to.not.be.null
+		expect(provider.isSupported('package.json')).to.be.true
+	})
+
+	test('verify bun workspace member walks up and finds lock file at workspace root', () => {
+		const manifest = 'test/providers/provider_manifests/bun/workspace_member_with_lock/packages/module-a/package.json'
+		const provider = match(manifest, availableProviders)
+		expect(provider).to.not.be.null
+		expect(provider.isSupported('package.json')).to.be.true
+	})
+
+	test('verify bun workspace member throws when workspace root has no lock file', () => {
+		const manifest = 'test/providers/provider_manifests/bun/workspace_member_without_lock/packages/module-a/package.json'
+		expect(() => match(manifest, availableProviders))
+			.to.throw('package.json requires a lock file')
+	})
+
+	test('verify match with wrong TRUSTIFY_DA_WORKSPACE_DIR fails for bun even when walk-up would succeed', () => {
+		const manifest = 'test/providers/provider_manifests/bun/workspace_member_with_lock/packages/module-a/package.json'
+		const opts = { TRUSTIFY_DA_WORKSPACE_DIR: 'test/providers/provider_manifests/bun/workspace_member_without_lock' }
 		expect(() => match(manifest, availableProviders, opts))
 			.to.throw('package.json requires a lock file')
 	})

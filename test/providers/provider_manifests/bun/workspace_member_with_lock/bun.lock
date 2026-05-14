@@ -1,0 +1,12 @@
+{
+  "lockfileVersion": 1,
+  "workspaces": {
+    "": {
+      "name": "test-workspace",
+    },
+    "packages/module-a": {
+      "name": "module-a",
+    },
+  },
+  "packages": {},
+}

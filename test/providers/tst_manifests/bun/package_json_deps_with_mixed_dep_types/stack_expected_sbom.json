@@ -1,0 +1,72 @@
+{
+	"bomFormat": "CycloneDX",
+	"specVersion": "1.4",
+	"version": 1,
+	"metadata": {
+		"timestamp": "2023-08-07T00:00:00.000Z",
+		"component": {
+			"name": "mixed-deps-test",
+			"version": "1.0.0",
+			"purl": "pkg:npm/mixed-deps-test@1.0.0",
+			"type": "application",
+			"bom-ref": "pkg:npm/mixed-deps-test@1.0.0"
+		}
+	},
+	"components": [
+		{
+			"name": "function-bind",
+			"version": "1.1.2",
+			"purl": "pkg:npm/function-bind@1.1.2",
+			"type": "library",
+			"bom-ref": "pkg:npm/function-bind@1.1.2"
+		},
+		{
+			"name": "is-callable",
+			"version": "1.2.7",
+			"purl": "pkg:npm/is-callable@1.2.7",
+			"type": "library",
+			"bom-ref": "pkg:npm/is-callable@1.2.7"
+		},
+		{
+			"name": "is-number",
+			"version": "7.0.0",
+			"purl": "pkg:npm/is-number@7.0.0",
+			"type": "library",
+			"bom-ref": "pkg:npm/is-number@7.0.0"
+		},
+		{
+			"name": "ms",
+			"version": "2.1.2",
+			"purl": "pkg:npm/ms@2.1.2",
+			"type": "library",
+			"bom-ref": "pkg:npm/ms@2.1.2"
+		}
+	],
+	"dependencies": [
+		{
+			"ref": "pkg:npm/mixed-deps-test@1.0.0",
+			"dependsOn": [
+				"pkg:npm/function-bind@1.1.2",
+				"pkg:npm/is-callable@1.2.7",
+				"pkg:npm/is-number@7.0.0",
+				"pkg:npm/ms@2.1.2"
+			]
+		},
+		{
+			"ref": "pkg:npm/function-bind@1.1.2",
+			"dependsOn": []
+		},
+		{
+			"ref": "pkg:npm/is-callable@1.2.7",
+			"dependsOn": []
+		},
+		{
+			"ref": "pkg:npm/is-number@7.0.0",
+			"dependsOn": []
+		},
+		{
+			"ref": "pkg:npm/ms@2.1.2",
+			"dependsOn": []
+		}
+	]
+}

@@ -1,0 +1,20 @@
+{
+	"name": "mixed-deps-test",
+	"version": "1.0.0",
+	"dependencies": {
+		"is-number": "7.0.0",
+		"ms": "2.1.2"
+	},
+	"peerDependencies": {
+		"is-callable": "1.2.7"
+	},
+	"optionalDependencies": {
+		"function-bind": "1.1.2"
+	},
+	"bundledDependencies": [
+		"is-number"
+	],
+	"devDependencies": {
+		"has-symbols": "1.0.3"
+	}
+}

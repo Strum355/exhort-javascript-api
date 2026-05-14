@@ -241,7 +241,7 @@ export default class Base_javascript {
 		this._version();
 		const manifestDir = path.dirname(this.#manifest.manifestPath);
 		const cmdDir = this._findLockFileDir(manifestDir, opts) || manifestDir;
-		this.#createLockFile(cmdDir);
+		this._createLockFile(cmdDir);
 
 		let output = this.#executeListCmd(includeTransitive, cmdDir);
 		output = this._parseDepTreeOutput(output);
@@ -408,9 +408,9 @@ export default class Base_javascript {
 	/**
    * Creates or updates the lock file for the package manager
    * @param {string} manifestDir - Directory containing the manifest file
-   * @private
+   * @protected
    */
-	#createLockFile(manifestDir) {
+	_createLockFile(manifestDir) {
 		const originalDir = process.cwd();
 		const isWindows = os.platform() === 'win32';
 

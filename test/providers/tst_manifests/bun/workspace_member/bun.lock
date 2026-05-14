@@ -1,0 +1,23 @@
+{
+  "lockfileVersion": 1,
+  "configVersion": 1,
+  "workspaces": {
+    "": {
+      "name": "test-workspace-root",
+    },
+    "packages/member-a": {
+      "name": "member-a",
+      "version": "1.0.0",
+      "dependencies": {
+        "axios": "0.21.1",
+      },
+    },
+  },
+  "packages": {
+    "axios": ["axios@0.21.1", "", { "dependencies": { "follow-redirects": "^1.10.0" } }, "sha512-dKQiRHxGD9PPRIUNIWvZhPTPpl1rf/OxTYKsqKUDjBwYylTvV7SjSHJb9ratfyzM6wCdLCOYLzs73qpg5c4iGA=="],
+
+    "follow-redirects": ["follow-redirects@1.16.0", "", {}, "sha512-y5rN/uOsadFT/JfYwhxRS5R7Qce+g3zG97+JrtFZlC9klX/W5hD7iiLzScI4nZqUS7DNUdhPgw4xI8W2LuXlUw=="],
+
+    "member-a": ["member-a@workspace:packages/member-a"],
+  }
+}
