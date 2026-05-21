@@ -87,7 +87,8 @@ suite('testing the java-maven data provider', async () => {
 		"pom_deps_with_no_ignore",
 		"poms_deps_with_ignore_long",
 		"poms_deps_with_no_ignore_long",
-		"pom_deps_with_no_ignore_common_paths"
+		"pom_deps_with_no_ignore_common_paths",
+		"pom_deps_with_version_range"
 	].forEach(testCase => {
 		let scenario = testCase.replace('pom_deps_', '').replaceAll('_', ' ')
 

@@ -59,7 +59,7 @@ export default class Base_Java {
 		}
 		let index = 0;
 		let target = lines[index];
-		let targetDepth = this.#getDepth(target);
+		let targetDepth = this._getDepth(target);
 		while (targetDepth > srcDepth && index < lines.length) {
 			if (targetDepth === srcDepth + 1) {
 				let from = this.parseDep(src);
@@ -71,10 +71,10 @@ export default class Base_Java {
 					sbom.addDependency(from, to)
 				}
 			} else {
-				this.parseDependencyTree(lines[index - 1], this.#getDepth(lines[index - 1]), lines.slice(index), sbom)
+				this.parseDependencyTree(lines[index - 1], this._getDepth(lines[index - 1]), lines.slice(index), sbom)
 			}
 			target = lines[++index];
-			targetDepth = this.#getDepth(target);
+			targetDepth = this._getDepth(target);
 		}
 	}
 
@@ -82,12 +82,11 @@ export default class Base_Java {
 	 * Calculates how deep in the graph is the given line
 	 * @param {string} line - line to calculate the depth from
 	 * @returns {number} The calculated depth
-	 * @private
+	 * @protected
 	 */
-	#getDepth(line) {
-		if (line === undefined) {
-			return -1;
-		}
+	_getDepth(line) {
+		if (!line || line.trim() === '') { return -1; }
+		if (line.match(/^\w/)) { return 0; }
 		return ((line.indexOf('-') - 1) / 3) + 1;
 	}
 

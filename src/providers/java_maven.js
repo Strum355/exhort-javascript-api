@@ -198,6 +198,7 @@ export default class Java_maven extends Base_java {
 		/** @type [Dependency] */
 		let dependencies = this.#getDependencies(tmpEffectivePom)
 			.filter(d => !this.#dependencyIn(d, ignored))
+		dependencies = this.#resolveVersionRanges(dependencies, manifestPath, opts)
 		let sbom = new Sbom();
 		let rootDependency = this.#getRootFromPom(tmpEffectivePom, manifestPath);
 		let purlRoot = this.toPurl(rootDependency.groupId, rootDependency.artifactId, rootDependency.version)
@@ -308,6 +309,82 @@ export default class Java_maven extends Base_java {
 	 */
 	#dependencyIn(dep, deps) {
 		return deps.filter(d => dep.artifactId === d.artifactId && dep.groupId === d.groupId && dep.scope === d.scope).length > 0
+	}
+
+	/**
+	 * Returns true if the given version string is a Maven version range
+	 * (starts with '[' or '(').
+	 * @param {string} version
+	 * @returns {boolean}
+	 * @private
+	 */
+	#isVersionRange(version) {
+		return typeof version === 'string' && (version.startsWith('[') || version.startsWith('('))
+	}
+
+	/**
+	 * Resolves Maven version ranges in the given dependency list by running
+	 * maven-dependency-plugin:tree and reading the concrete versions it selects.
+	 * If no dependency uses a version range, returns the list unchanged.
+	 * @param {Dependency[]} dependencies
+	 * @param {string} manifestPath
+	 * @param {object} opts
+	 * @returns {Dependency[]}
+	 * @private
+	 */
+	#resolveVersionRanges(dependencies, manifestPath, opts = {}) {
+		// short-circuit if no dependency has a version range
+		if (!dependencies.some(dep => this.#isVersionRange(dep.version))) {
+			return dependencies
+		}
+
+		const mvn = this.selectToolBinary(manifestPath, opts)
+		const mvnArgs = JSON.parse(getCustom('TRUSTIFY_DA_MVN_ARGS', '[]', opts));
+		const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'trustify_da_range_'))
+		const tmpDepTree = path.join(tmpDir, 'mvn_deptree_ranges.txt')
+
+		try {
+			this._invokeCommand(mvn, [
+				'-q',
+				'org.apache.maven.plugins:maven-dependency-plugin:3.6.0:tree',
+				'-Dscope=compile',
+				'-DoutputType=text',
+				`-DoutputFile=${tmpDepTree}`,
+				...mvnArgs
+			], { cwd: path.dirname(manifestPath) })
+
+			const content = fs.readFileSync(tmpDepTree)
+			const lines = content.toString().split(EOL).filter(l => l.trim() !== '')
+
+			// Build a map of groupId:artifactId -> resolved version from depth-1 entries
+			/** @type {Map<string, string>} */
+			const resolvedVersions = new Map()
+			for (const line of lines) {
+				if (this._getDepth(line) === 1) {
+					const purl = this.parseDep(line)
+					resolvedVersions.set(`${purl.namespace}:${purl.name}`, purl.version)
+				}
+			}
+
+			// Replace version ranges with resolved concrete versions
+			return dependencies.map(dep => {
+				if (this.#isVersionRange(dep.version)) {
+					const key = `${dep.groupId}:${dep.artifactId}`
+					const resolved = resolvedVersions.get(key)
+					if (resolved) {
+						return { ...dep, version: resolved }
+					}
+				}
+				return dep
+			})
+		} catch (error) {
+			if (process.env["TRUSTIFY_DA_DEBUG"] === "true") {
+				console.error("Failed to resolve Maven version ranges: " + error.message)
+			}
+			return dependencies
+		} finally {
+			fs.rmSync(tmpDir, { recursive: true, force: true })
+		}
 	}
 }
 
