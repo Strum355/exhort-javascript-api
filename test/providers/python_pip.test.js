@@ -49,6 +49,8 @@ async function sharedStackAnalysisTestFlow(testCase, usePipDepTreeUtility) {
 }
 
 suite('testing the python-pip data provider', () => {
+	suiteSetup(() => clock = useFakeTimers(new Date('2023-10-01T00:00:00.000Z')));
+	suiteTeardown(() => clock.restore());
 	[
 		{name: 'requirements.txt', expected: true},
 		{name: 'some_other.file', expected: false}
@@ -84,9 +86,11 @@ suite('testing the python-pip data provider', () => {
 		}).timeout(process.env.GITHUB_ACTIONS ? 15000 : 10000)
 	});
 
-}).beforeAll(() => clock = useFakeTimers(new Date('2023-10-01T00:00:00.000Z'))).afterAll(()=> clock.restore());
+});
 
 suite('testing the python-pip data provider with virtual environment', () => {
+	suiteSetup(() => clock = useFakeTimers(new Date('2023-10-01T00:00:00.000Z')));
+	suiteTeardown(() => clock.restore());
 	[
 		"pip_requirements_virtual_env_txt_no_ignore",
 		"pip_requirements_virtual_env_with_ignore"
@@ -115,9 +119,11 @@ suite('testing the python-pip data provider with virtual environment', () => {
 		}).timeout(process.env.GITHUB_ACTIONS ? 60000 : 30000)
 	})
 
-}).beforeAll(() => {clock = useFakeTimers(new Date('2023-10-01T00:00:00.000Z'))}).afterAll(()=> clock.restore());
+});
 
 suite('testing python-pip PEP 508 marker handling', () => {
+	suiteSetup(() => clock = useFakeTimers(new Date('2023-10-01T00:00:00.000Z')));
+	suiteTeardown(() => clock.restore());
 	const markerTestCase = 'pip_requirements_txt_marker_skip'
 
 	/** Verify that packages with environment markers (PEP 508) that are not installed
@@ -153,9 +159,11 @@ suite('testing python-pip PEP 508 marker handling', () => {
 		}
 	}).timeout(10000)
 
-}).beforeAll(() => clock = useFakeTimers(new Date('2023-10-01T00:00:00.000Z'))).afterAll(() => clock.restore());
+});
 
 suite('testing python-pip SHA-256 hash extraction via pip inspect', () => {
+	suiteSetup(() => clock = useFakeTimers(new Date('2023-10-01T00:00:00.000Z')));
+	suiteTeardown(() => clock.restore());
 	const hashTestCase = 'pip_requirements_txt_with_hashes'
 
 	const pipFreezeOutput = 'certifi==2023.7.22\nsix==1.16.0\n'
@@ -276,9 +284,11 @@ suite('testing python-pip SHA-256 hash extraction via pip inspect', () => {
 		}
 	}).timeout(10000)
 
-}).beforeAll(() => clock = useFakeTimers(new Date('2023-10-01T00:00:00.000Z'))).afterAll(() => clock.restore());
+});
 
 suite('testing python-pip SHA-256 hashes with real pip inspect', () => {
+	suiteSetup(() => clock = useFakeTimers(new Date('2023-10-01T00:00:00.000Z')));
+	suiteTeardown(() => clock.restore());
 	const testCase = 'pip_requirements_txt_with_hashes'
 
 	/** Verifies SBOM components include SHA-256 hashes from real pip inspect. */
@@ -302,4 +312,4 @@ suite('testing python-pip SHA-256 hashes with real pip inspect', () => {
 		}
 	}).timeout(process.env.GITHUB_ACTIONS ? 30000 : 10000)
 
-}).beforeAll(() => clock = useFakeTimers(new Date('2023-10-01T00:00:00.000Z'))).afterAll(() => clock.restore());
+});

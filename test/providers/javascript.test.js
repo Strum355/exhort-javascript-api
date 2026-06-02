@@ -54,6 +54,8 @@ async function createMockProvider(providerName, listingOutput) {
 }
 
 suite('testing the javascript-npm data provider', async () => {
+	suiteSetup(() => clock = useFakeTimers(new Date('2023-08-07T00:00:00.000Z')));
+	suiteTeardown(() => clock.restore());
 	[
 		{ name: 'npm/with_lock_file', validation: true },
 		{ name: 'npm/without_lock_file', validation: false },
@@ -371,4 +373,4 @@ suite('testing the javascript-npm data provider', async () => {
 			.to.throw('package.json requires a lock file')
 	})
 
-}).beforeAll(() => clock = useFakeTimers(new Date('2023-08-07T00:00:00.000Z'))).afterAll(() => clock.restore());
+});

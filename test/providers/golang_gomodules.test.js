@@ -9,6 +9,8 @@ import golangGoModules from "../../src/providers/golang_gomodules.js"
 
 let clock
 suite('testing the golang-go-modules data provider', () => {
+	suiteSetup(() => clock = useFakeTimers(new Date('2023-08-07T00:00:00.000Z')));
+	suiteTeardown(() => clock.restore());
 	[
 		{name: 'go.mod', expected: true},
 		{name: 'some_other.file', expected: false}
@@ -81,6 +83,6 @@ suite('testing the golang-go-modules data provider', () => {
 		}).timeout(process.env.GITHUB_ACTIONS ? 30000 : 10000)
 
 	})
-}).beforeAll(() => clock = useFakeTimers(new Date('2023-08-07T00:00:00.000Z'))).afterAll(()=> clock.restore());
+});
 
 

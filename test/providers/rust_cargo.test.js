@@ -72,6 +72,8 @@ async function getParsedSbom(testDir, analysisType) {
 }
 
 suite('testing the rust-cargo data provider', () => {
+	suiteSetup(() => clock = useFakeTimers(new Date('2023-08-07T00:00:00.000Z')));
+	suiteTeardown(() => clock.restore());
 	[
 		{ name: 'Cargo.toml', expected: true },
 		{ name: 'package.json', expected: false },
@@ -142,9 +144,11 @@ suite('testing the rust-cargo data provider', () => {
 		expect(provider).to.not.be.null
 		expect(provider.isSupported('Cargo.toml')).to.be.true
 	})
-}).beforeAll(() => clock = useFakeTimers(new Date('2023-08-07T00:00:00.000Z'))).afterAll(() => clock.restore());
+});
 
 suite('testing the rust-cargo single crate without ignore', () => {
+	suiteSetup(() => clock = useFakeTimers(new Date('2023-08-07T00:00:00.000Z')));
+	suiteTeardown(() => clock.restore());
 	const testDir = 'test/providers/tst_manifests/cargo/cargo_single_crate_no_ignore'
 
 	test('verify Cargo.toml sbom provided for stack analysis', async () => {
@@ -154,9 +158,11 @@ suite('testing the rust-cargo single crate without ignore', () => {
 	test('verify Cargo.toml sbom provided for component analysis', async () => {
 		await assertSbomMatchesExpected(testDir, 'component')
 	}).timeout(10000)
-}).beforeAll(() => clock = useFakeTimers(new Date('2023-08-07T00:00:00.000Z'))).afterAll(() => clock.restore());
+});
 
 suite('testing the rust-cargo single crate with ignore', () => {
+	suiteSetup(() => clock = useFakeTimers(new Date('2023-08-07T00:00:00.000Z')));
+	suiteTeardown(() => clock.restore());
 	const testDir = 'test/providers/tst_manifests/cargo/cargo_single_crate_with_ignore'
 
 	test('verify Cargo.toml sbom provided for stack analysis with ignored deps', async () => {
@@ -166,9 +172,11 @@ suite('testing the rust-cargo single crate with ignore', () => {
 	test('verify Cargo.toml sbom provided for component analysis with ignored deps', async () => {
 		await assertSbomMatchesExpected(testDir, 'component')
 	}).timeout(10000)
-}).beforeAll(() => clock = useFakeTimers(new Date('2023-08-07T00:00:00.000Z'))).afterAll(() => clock.restore());
+});
 
 suite('testing the rust-cargo virtual workspace', () => {
+	suiteSetup(() => clock = useFakeTimers(new Date('2023-08-07T00:00:00.000Z')));
+	suiteTeardown(() => clock.restore());
 	const testDir = 'test/providers/tst_manifests/cargo/cargo_virtual_workspace'
 
 	test('verify Cargo.toml sbom provided for stack analysis with virtual workspace', async () => {
@@ -178,9 +186,11 @@ suite('testing the rust-cargo virtual workspace', () => {
 	test('verify Cargo.toml sbom provided for component analysis with virtual workspace', async () => {
 		await assertSbomMatchesExpected(testDir, 'component')
 	}).timeout(10000)
-}).beforeAll(() => clock = useFakeTimers(new Date('2023-08-07T00:00:00.000Z'))).afterAll(() => clock.restore());
+});
 
 suite('testing the rust-cargo workspace with root package', () => {
+	suiteSetup(() => clock = useFakeTimers(new Date('2023-08-07T00:00:00.000Z')));
+	suiteTeardown(() => clock.restore());
 	const testDir = 'test/providers/tst_manifests/cargo/cargo_workspace_with_root'
 
 	test('verify Cargo.toml sbom provided for stack analysis with workspace root package', async () => {
@@ -190,9 +200,11 @@ suite('testing the rust-cargo workspace with root package', () => {
 	test('verify Cargo.toml sbom provided for component analysis with workspace root package', async () => {
 		await assertSbomMatchesExpected(testDir, 'component')
 	}).timeout(10000)
-}).beforeAll(() => clock = useFakeTimers(new Date('2023-08-07T00:00:00.000Z'))).afterAll(() => clock.restore());
+});
 
 suite('testing rust-cargo dependency filtering', () => {
+	suiteSetup(() => clock = useFakeTimers(new Date('2023-08-07T00:00:00.000Z')));
+	suiteTeardown(() => clock.restore());
 	const testDir = 'test/providers/tst_manifests/cargo/cargo_single_crate_no_ignore'
 
 	test('verify dev dependencies are excluded from stack analysis', async () => {
@@ -211,9 +223,11 @@ suite('testing rust-cargo dependency filtering', () => {
 
 		expect(sbom.components.find(c => c.name === 'tempfile')).to.be.undefined
 	}).timeout(10000)
-}).beforeAll(() => clock = useFakeTimers(new Date('2023-08-07T00:00:00.000Z'))).afterAll(() => clock.restore());
+});
 
 suite('testing rust-cargo error handling', () => {
+	suiteSetup(() => clock = useFakeTimers(new Date('2023-08-07T00:00:00.000Z')));
+	suiteTeardown(() => clock.restore());
 	test('verify error when cargo binary is not accessible', async () => {
 		let provider = await esmock('../../src/providers/rust_cargo.js', {
 			'../../src/tools.js': {
@@ -249,9 +263,11 @@ suite('testing rust-cargo error handling', () => {
 		expect(() => provider.provideStack('test/providers/tst_manifests/cargo/cargo_single_crate_no_ignore/Cargo.toml'))
 			.to.throw('failed to execute cargo metadata')
 	}).timeout(10000)
-}).beforeAll(() => clock = useFakeTimers(new Date('2023-08-07T00:00:00.000Z'))).afterAll(() => clock.restore());
+});
 
 suite('testing rust-cargo ignore with underscore/hyphen normalization', () => {
+	suiteSetup(() => clock = useFakeTimers(new Date('2023-08-07T00:00:00.000Z')));
+	suiteTeardown(() => clock.restore());
 	const testDir = 'test/providers/tst_manifests/cargo/cargo_single_crate_with_hyphen_ignore'
 
 	test('verify hyphenated ignore name matches underscored crate in stack analysis', async () => {
@@ -272,9 +288,11 @@ suite('testing rust-cargo ignore with underscore/hyphen normalization', () => {
 		expect(sbom.components.find(c => c.name === 'serde')).to.not.be.undefined
 		expect(sbom.components.find(c => c.name === 'tokio')).to.not.be.undefined
 	}).timeout(10000)
-}).beforeAll(() => clock = useFakeTimers(new Date('2023-08-07T00:00:00.000Z'))).afterAll(() => clock.restore());
+});
 
 suite('testing rust-cargo ignore annotations with trustify-da-ignore', () => {
+	suiteSetup(() => clock = useFakeTimers(new Date('2023-08-07T00:00:00.000Z')));
+	suiteTeardown(() => clock.restore());
 	const testDir = 'test/providers/tst_manifests/cargo/cargo_single_crate_with_ignore'
 
 	test('verify trustify-da-ignore dependency is excluded from stack analysis', async () => {
@@ -293,9 +311,11 @@ suite('testing rust-cargo ignore annotations with trustify-da-ignore', () => {
 
 		expect(sbom.components.find(c => c.name === 'serde')).to.be.undefined
 	}).timeout(10000)
-}).beforeAll(() => clock = useFakeTimers(new Date('2023-08-07T00:00:00.000Z'))).afterAll(() => clock.restore());
+});
 
 suite('testing rust-cargo ignore annotations with exhortignore', () => {
+	suiteSetup(() => clock = useFakeTimers(new Date('2023-08-07T00:00:00.000Z')));
+	suiteTeardown(() => clock.restore());
 	const testDir = 'test/providers/tst_manifests/cargo/cargo_single_crate_with_exhortignore'
 
 	test('verify exhortignore dependency is excluded from stack analysis', async () => {
@@ -314,9 +334,11 @@ suite('testing rust-cargo ignore annotations with exhortignore', () => {
 
 		expect(sbom.components.find(c => c.name === 'serde')).to.be.undefined
 	}).timeout(10000)
-}).beforeAll(() => clock = useFakeTimers(new Date('2023-08-07T00:00:00.000Z'))).afterAll(() => clock.restore());
+});
 
 suite('testing rust-cargo virtual workspace ignore with trustify-da-ignore', () => {
+	suiteSetup(() => clock = useFakeTimers(new Date('2023-08-07T00:00:00.000Z')));
+	suiteTeardown(() => clock.restore());
 	const testDir = 'test/providers/tst_manifests/cargo/cargo_virtual_workspace_with_ignore'
 
 	test('verify sbom matches expected for stack analysis', async () => {
@@ -344,9 +366,11 @@ suite('testing rust-cargo virtual workspace ignore with trustify-da-ignore', () 
 		expect(sbom.components.find(c => c.name === 'crate-a')).to.be.undefined
 		expect(sbom.components.find(c => c.name === 'crate-b')).to.be.undefined
 	}).timeout(10000)
-}).beforeAll(() => clock = useFakeTimers(new Date('2023-08-07T00:00:00.000Z'))).afterAll(() => clock.restore());
+});
 
 suite('testing rust-cargo virtual workspace ignore with exhortignore', () => {
+	suiteSetup(() => clock = useFakeTimers(new Date('2023-08-07T00:00:00.000Z')));
+	suiteTeardown(() => clock.restore());
 	const testDir = 'test/providers/tst_manifests/cargo/cargo_virtual_workspace_with_exhortignore'
 
 	test('verify sbom matches expected for stack analysis', async () => {
@@ -374,9 +398,11 @@ suite('testing rust-cargo virtual workspace ignore with exhortignore', () => {
 		expect(sbom.components.find(c => c.name === 'crate-a')).to.be.undefined
 		expect(sbom.components.find(c => c.name === 'crate-b')).to.be.undefined
 	}).timeout(10000)
-}).beforeAll(() => clock = useFakeTimers(new Date('2023-08-07T00:00:00.000Z'))).afterAll(() => clock.restore());
+});
 
 suite('testing rust-cargo workspace with root ignore with trustify-da-ignore', () => {
+	suiteSetup(() => clock = useFakeTimers(new Date('2023-08-07T00:00:00.000Z')));
+	suiteTeardown(() => clock.restore());
 	const testDir = 'test/providers/tst_manifests/cargo/cargo_workspace_with_root_ignore'
 
 	test('verify sbom matches expected for stack analysis', async () => {
@@ -403,9 +429,11 @@ suite('testing rust-cargo workspace with root ignore with trustify-da-ignore', (
 		expect(sbom.components.find(c => c.name === 'sub-crate')).to.be.undefined
 		expect(sbom.components.find(c => c.name === 'tokio')).to.be.undefined
 	}).timeout(10000)
-}).beforeAll(() => clock = useFakeTimers(new Date('2023-08-07T00:00:00.000Z'))).afterAll(() => clock.restore());
+});
 
 suite('testing rust-cargo virtual workspace with glob member patterns', () => {
+	suiteSetup(() => clock = useFakeTimers(new Date('2023-08-07T00:00:00.000Z')));
+	suiteTeardown(() => clock.restore());
 	const testDir = 'test/providers/tst_manifests/cargo/cargo_virtual_workspace_glob_members'
 
 	test('verify sbom matches expected for stack analysis', async () => {
@@ -433,9 +461,11 @@ suite('testing rust-cargo virtual workspace with glob member patterns', () => {
 		expect(sbom.components.find(c => c.name === 'crate-a')).to.be.undefined
 		expect(sbom.components.find(c => c.name === 'crate-b')).to.be.undefined
 	}).timeout(10000)
-}).beforeAll(() => clock = useFakeTimers(new Date('2023-08-07T00:00:00.000Z'))).afterAll(() => clock.restore());
+});
 
 suite('testing rust-cargo virtual workspace with [workspace.dependencies]', () => {
+	suiteSetup(() => clock = useFakeTimers(new Date('2023-08-07T00:00:00.000Z')));
+	suiteTeardown(() => clock.restore());
 	const testDir = 'test/providers/tst_manifests/cargo/cargo_virtual_workspace_with_workspace_deps'
 
 	test('verify sbom matches expected for stack analysis', async () => {
@@ -470,9 +500,11 @@ suite('testing rust-cargo virtual workspace with [workspace.dependencies]', () =
 		expect(sbom.components.find(c => c.name === 'tokio')).to.not.be.undefined
 		expect(sbom.components.find(c => c.name === 'pin-project-lite')).to.not.be.undefined
 	}).timeout(10000)
-}).beforeAll(() => clock = useFakeTimers(new Date('2023-08-07T00:00:00.000Z'))).afterAll(() => clock.restore());
+});
 
 suite('testing rust-cargo workspace with root ignore with exhortignore', () => {
+	suiteSetup(() => clock = useFakeTimers(new Date('2023-08-07T00:00:00.000Z')));
+	suiteTeardown(() => clock.restore());
 	const testDir = 'test/providers/tst_manifests/cargo/cargo_workspace_with_root_exhortignore'
 
 	test('verify sbom matches expected for stack analysis', async () => {
@@ -499,9 +531,11 @@ suite('testing rust-cargo workspace with root ignore with exhortignore', () => {
 		expect(sbom.components.find(c => c.name === 'sub-crate')).to.be.undefined
 		expect(sbom.components.find(c => c.name === 'tokio')).to.be.undefined
 	}).timeout(10000)
-}).beforeAll(() => clock = useFakeTimers(new Date('2023-08-07T00:00:00.000Z'))).afterAll(() => clock.restore());
+});
 
 suite('testing rust-cargo license detection', () => {
+	suiteSetup(() => clock = useFakeTimers(new Date('2023-08-07T00:00:00.000Z')));
+	suiteTeardown(() => clock.restore());
 	const singleCrateLicenseDir = 'test/providers/tst_manifests/cargo/cargo_single_crate_with_license'
 	const virtualWorkspaceLicenseDir = 'test/providers/tst_manifests/cargo/cargo_virtual_workspace_with_license'
 
@@ -537,9 +571,11 @@ suite('testing rust-cargo license detection', () => {
 		let sbom = await getParsedSbom('test/providers/tst_manifests/cargo/cargo_single_crate_no_ignore', 'stack')
 		expect(sbom.metadata.component.licenses).to.be.undefined
 	}).timeout(10000)
-}).beforeAll(() => clock = useFakeTimers(new Date('2023-08-07T00:00:00.000Z'))).afterAll(() => clock.restore());
+});
 
 suite('testing rust-cargo workspace license inheritance', () => {
+	suiteSetup(() => clock = useFakeTimers(new Date('2023-08-07T00:00:00.000Z')));
+	suiteTeardown(() => clock.restore());
 	const workspaceLicenseDir = 'test/providers/tst_manifests/cargo/cargo_single_crate_workspace_license'
 
 	/** Verifies that workspace-inherited license resolves correctly in stack analysis SBOM. */
@@ -575,4 +611,4 @@ suite('testing rust-cargo workspace license inheritance', () => {
 		let sbom = await getParsedSbom(workspaceLicenseMissingDir, 'stack')
 		expect(sbom.metadata.component.licenses).to.be.undefined
 	}).timeout(10000)
-}).beforeAll(() => clock = useFakeTimers(new Date('2023-08-07T00:00:00.000Z'))).afterAll(() => clock.restore());
+});

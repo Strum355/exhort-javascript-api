@@ -7,6 +7,8 @@ import { generateImageSBOM, parseImageRef } from '../../src/oci_image/utils.js';
 
 let clock;
 suite('testing the OCI image data provider', () => {
+	suiteSetup(() => clock = useFakeTimers(new Date('2023-08-07T00:00:00.000Z')));
+	suiteTeardown(() => clock.restore());
 	[
 		"httpd@sha256:4b5cb7697fea2aa6d398504c381b693a54ae9ad5e6317fcdbb7a2d9b8c3b1364",
 		"httpd:2.4.49",
@@ -36,4 +38,4 @@ suite('testing the OCI image data provider', () => {
 		}).timeout(10000)
 	})
 
-}).beforeAll(() => clock = useFakeTimers(new Date('2023-08-07T00:00:00.000Z'))).afterAll(() => clock.restore());
+});

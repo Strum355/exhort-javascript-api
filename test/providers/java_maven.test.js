@@ -48,6 +48,8 @@ async function createMockProvider(testPath) {
 
 const mvnPath = await which('mvn');
 suite('testing the java-maven data provider', async () => {
+	suiteSetup(() => clock = useFakeTimers(new Date('2023-08-07T00:00:00.000Z')));
+	suiteTeardown(() => clock.restore());
 
 	[
 		{name: 'pom.xml', expected: true},
@@ -126,9 +128,11 @@ suite('testing the java-maven data provider', async () => {
 		// these test cases takes ~1400-2000 ms each pr >10000 in CI (for the first test-case)
 
 	})
-}).beforeAll(() => clock = useFakeTimers(new Date('2023-08-07T00:00:00.000Z'))).afterAll(()=> {clock.restore()});
+});
 
 suite('testing the java-maven data provider with modules', () => {
+	suiteSetup(() => clock = useFakeTimers(new Date('2023-08-07T00:00:00.000Z')));
+	suiteTeardown(() => clock.restore());
 	[
 		"pom_with_one_module",
 		"pom_with_multiple_modules"
@@ -155,9 +159,11 @@ suite('testing the java-maven data provider with modules', () => {
 		// these test cases takes ~1400-2000 ms each pr >10000 in CI (for the first test-case)
 
 	})
-}).beforeAll(() => clock = useFakeTimers(new Date('2023-08-07T00:00:00.000Z'))).afterAll(()=> {clock.restore()});
+});
 
 suite('testing the java-maven version parsing in getDependencies', () => {
+	suiteSetup(() => clock = useFakeTimers(new Date('2023-08-07T00:00:00.000Z')));
+	suiteTeardown(() => clock.restore());
 	test('verify version parsing works correctly', async () => {
 		const testCase = 'pom_deps_with_ignore_version_from_property';
 		const javaMvnProvider = await createMockProvider(`test/providers/tst_manifests/maven/${testCase}`);
@@ -174,4 +180,4 @@ suite('testing the java-maven version parsing in getDependencies', () => {
 		expect(bouncyCastleDependency).to.exist;
 		expect(bouncyCastleDependency.ref).to.equal('pkg:maven/org.bouncycastle/bcprov-jdk18on@1.80');
 	});
-}).beforeAll(() => clock = useFakeTimers(new Date('2023-08-07T00:00:00.000Z'))).afterAll(()=> {clock.restore()});
+});

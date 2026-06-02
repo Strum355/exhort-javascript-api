@@ -12,6 +12,10 @@ suite('testing Select Trustify DA Backend function', () => {
 	const testUrl = 'https://trustify-da.example.com';
 	const testUrl2 = 'https://dev.trustify-da.example.com';
 
+	suiteTeardown(() => {
+		delete process.env['TRUSTIFY_DA_BACKEND_URL'];
+	});
+
 	test('When TRUSTIFY_DA_BACKEND_URL is set in environment variable, should return that value', () => {
 		process.env['TRUSTIFY_DA_BACKEND_URL'] = testUrl;
 		let selectedUrl = selectTrustifyDABackend({});
@@ -64,18 +68,17 @@ suite('testing Select Trustify DA Backend function', () => {
 		};
 		expect(() => selectTrustifyDABackend(testOpts)).to.throw('TRUSTIFY_DA_BACKEND_URL is unset');
 	});
-
-}).afterAll(() => {
-	delete process.env['TRUSTIFY_DA_BACKEND_URL'];
 });
 
 suite('verify token header logging', () => {
+	suiteSetup(() => sinon.spy(console, 'log'));
+	suiteTeardown(() => console.log.restore());
+
 	test('don\'t log the token header', () => {
 		getTokenHeaders({
 			'TRUSTIFY_DA_TOKEN': 'banana',
 			'TRUSTIFY_DA_DEBUG': 'true'
 		})
-		// Should only be called once with "Headers Values to be sent to Trustify DA backend:"
 		expect(console.log).to.be.calledOnce
 	})
-}).beforeAll(() => sinon.spy(console, 'log')).afterAll(() => console.log.restore())
+});

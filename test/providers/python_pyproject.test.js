@@ -26,6 +26,15 @@ const SBOM_CASES = [
 ]
 
 suite('testing the python-pyproject data provider', () => {
+	suiteSetup(() => {
+		originalPlatform = process.platform
+		Object.defineProperty(process, 'platform', { value: 'linux', configurable: true })
+		clock = useFakeTimers(new Date('2023-10-01T00:00:00.000Z'))
+	});
+	suiteTeardown(() => {
+		Object.defineProperty(process, 'platform', { value: originalPlatform, configurable: true })
+		clock.restore()
+	});
 	/** Verifies isSupported correctly identifies pyproject.toml manifests. */
 	[
 		{name: 'pyproject.toml', expected: true},
@@ -638,14 +647,7 @@ suite('testing the python-pyproject data provider', () => {
 		})
 	})
 
-}).beforeAll(() => {
-	originalPlatform = process.platform
-	Object.defineProperty(process, 'platform', { value: 'linux', configurable: true })
-	clock = useFakeTimers(new Date('2023-10-01T00:00:00.000Z'))
-}).afterAll(() => {
-	Object.defineProperty(process, 'platform', { value: originalPlatform, configurable: true })
-	clock.restore()
-})
+});
 
 suite('testing python-poetry error handling', () => {
 	/** Verifies that a missing poetry binary produces a clear error message. */

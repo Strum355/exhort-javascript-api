@@ -27,6 +27,8 @@ function getStubbedResponse(args, dependencyTreeTextContent, gradleProperties) {
 }
 
 suite('testing the java-gradle-groovy data provider', () => {
+	suiteSetup(() => clock = useFakeTimers(new Date('2023-08-07T00:00:00.000Z')));
+	suiteTeardown(() => clock.restore());
 
 	[
 		{ name: 'build.gradle', expected: true },
@@ -100,5 +102,5 @@ suite('testing the java-gradle-groovy data provider', () => {
 			throws(() => provider.provideComponent(`test/providers/tst_manifests/gradle/${testCase}/build.gradle`, {}))
 		})
 	})
-}).beforeAll(() => clock = useFakeTimers(new Date('2023-08-07T00:00:00.000Z'))).afterAll(() => { clock.restore() });
+});
 

@@ -9,6 +9,10 @@ updates:
     exclude-paths:
       - "test/providers/tst_manifests/**"
       - "test/providers/provider_manifests/**"
+    ignore:
+      # Blocked on upstream purl spec issue for '+' encoding in versions.
+      # See: https://github.com/package-url/packageurl-js/pull/90
+      - dependency-name: "packageurl-js"
     groups:
       npm-dependencies:
         patterns:
