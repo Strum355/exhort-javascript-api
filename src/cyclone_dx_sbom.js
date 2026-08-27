@@ -2,6 +2,15 @@ import {EOL} from "os";
 
 import {PackageURL} from "packageurl-js";
 
+import {getPackageVersion} from "./package_version.js";
+
+/**
+ * This client's version, read once at module load, used to populate
+ * metadata.tools.components[].version in the generated SBOM.
+ * @type {string|undefined}
+ */
+const PACKAGE_VERSION = getPackageVersion()
+
 /**
  *
  * @param component {PackageURL}
@@ -198,11 +207,18 @@ export default class CycloneDxSbom {
 		const rootPurl = this.rootComponent?.purl;
 		this.sbomObject = {
 			"bomFormat": "CycloneDX",
-			"specVersion": "1.4",
+			"specVersion": "1.6",
 			"version": 1,
 			"metadata": {
 				"timestamp": new Date(),
 				"component": this.rootComponent,
+				"tools": {
+					"components": [{
+						"type": "application",
+						"name": "trustify-da-javascript-client",
+						"version": PACKAGE_VERSION
+					}]
+				},
 				"properties": new Array()
 			},
 			"components": this.components.filter(c => c.purl !== rootPurl),
