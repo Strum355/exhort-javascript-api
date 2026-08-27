@@ -4,7 +4,7 @@ go 1.19
 
 require (
         github.com/gin-gonic/gin v1.9.1
-        github.com/google/uuid v1.1.2
+        github.com/google/uuid v1.1.2 // trustify-da-ignore-invalidmarker
         github.com/jessevdk/go-flags v1.5.0 //trustify-da-ignore
         github.com/kr/pretty v0.3.1
         gopkg.in/yaml.v2 v2.4.0

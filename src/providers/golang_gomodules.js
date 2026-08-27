@@ -96,8 +96,8 @@ function getChildVertexFromEdge(edge) {
 /**
  * Check whether a require_spec has a valid ignore marker.
  * Supports both the legacy `exhortignore` marker and the new `trustify-da-ignore` marker.
- * For direct dependencies: `//exhortignore` or `// exhortignore`
- * For indirect dependencies: `// indirect; exhortignore` (semicolon-separated)
+ * For direct dependencies: `//exhortignore` or `// trustify-da-ignore`
+ * For indirect dependencies: `// indirect; exhortignore` or `// indirect; trustify-da-ignore` (semicolon-separated)
  * @param {import('web-tree-sitter').SyntaxNode} specNode
  * @return {boolean}
  */
@@ -109,10 +109,10 @@ function hasExhortIgnore(specNode) {
 	let comments = specNode.children.filter(c => c.type === 'comment')
 	for (let comment of comments) {
 		let text = comment.text
-		if (/^\/\/\s*indirect;\s*(exhortignore|trustify-da-ignore)/.test(text)) {
+		if (/^\/\/\s*indirect;\s*(exhortignore|trustify-da-ignore)(?![\w-])/.test(text)) {
 			return true
 		}
-		if (/^\/\/\s*(exhortignore|trustify-da-ignore)/.test(text)) {
+		if (/^\/\/\s*(exhortignore|trustify-da-ignore)(?![\w-])/.test(text)) {
 			return true
 		}
 	}

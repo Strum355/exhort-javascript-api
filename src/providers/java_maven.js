@@ -22,6 +22,11 @@ import Base_java, { ecosystem_maven } from "./base_java.js";
 
 /** @typedef {{groupId: string, artifactId: string, version: string, scope: string, ignore: boolean}} Dependency */
 
+// Matches the legacy `exhortignore` and new `trustify-da-ignore` markers as whole
+// tokens. The trailing `(?![\w-])` boundary prevents lookalikes such as
+// `trustify-da-ignore-disabled` from being treated as ignore directives.
+const IGNORE_MARKER_REGEX = /(exhortignore|trustify-da-ignore)(?![\w-])/
+
 export default class Java_maven extends Base_java {
 	constructor() {
 		super('mvn', 'mvnw' + (process.platform === 'win32' ? '.cmd' : ''))
@@ -370,7 +375,7 @@ export default class Java_maven extends Base_java {
 
 		pomXml.forEach(dep => {
 			let ignore = false
-			if (dep['#comment'] && ['exhortignore', 'trustify-da-ignore'].some(marker => dep['#comment'].includes(marker))) { // #comment is an array or a string
+			if (dep['#comment'] && [].concat(dep['#comment']).some(comment => IGNORE_MARKER_REGEX.test(comment))) { // #comment is an array or a string
 				ignore = true
 			}
 			if (dep['scope'] !== 'test') {

@@ -11,7 +11,7 @@ repositories {
 
 dependencies {
     implementation "io.quarkus:quarkus-hibernate-orm:2.13.5.Final"
-    implementation "io.quarkus:quarkus-agroal:2.13.5.Final"
+    implementation "io.quarkus:quarkus-agroal:2.13.5.Final" // trustify-da-ignore-invalidmarker
     implementation "io.quarkus:quarkus-resteasy:2.13.5.Final"
     implementation "io.quarkus:quarkus-resteasy-jackson:2.13.5.Final"
     implementation "io.quarkus:quarkus-jdbc-postgresql:2.13.5.Final"
