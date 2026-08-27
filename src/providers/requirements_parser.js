@@ -22,7 +22,7 @@ export async function getRequirementQuery() {
 
 export async function getIgnoreQuery() {
 	const language = await init();
-	return new Query(language, '((requirement (package) @name) @req . (comment) @comment (#match? @comment "^#[\\t ]*exhortignore"))');
+	return new Query(language, '((requirement (package) @name) @req . (comment) @comment (#match? @comment "^#[\\t ]*(exhortignore|trustify-da-ignore)"))');
 }
 
 export async function getPinnedVersionQuery() {

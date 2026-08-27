@@ -336,7 +336,8 @@ export default class Java_maven extends Base_java {
 	}
 
 	/**
-	 * Get a list of dependencies with marking of dependencies commented with <!--exhortignore-->.
+	 * Get a list of dependencies with marking of dependencies commented with
+	 * <!--exhortignore--> or <!--trustify-da-ignore-->.
 	 * @param {string} manifest - path for pom.xml
 	 * @returns {[Dependency]} an array of dependencies
 	 * @private
@@ -354,7 +355,7 @@ export default class Java_maven extends Base_java {
 		let buf = fs.readFileSync(manifest)
 		// parse manifest pom.xml to json
 		let pomJson = parser.parse(buf.toString())
-		// iterate over all dependencies and chery pick dependencies with a exhortignore comment
+		// iterate over all dependencies and chery pick dependencies with an ignore comment
 		let pomXml;
 		// project without modules
 		if (pomJson['project']) {
@@ -369,7 +370,7 @@ export default class Java_maven extends Base_java {
 
 		pomXml.forEach(dep => {
 			let ignore = false
-			if (dep['#comment'] && dep['#comment'].includes('exhortignore')) { // #comment is an array or a string
+			if (dep['#comment'] && ['exhortignore', 'trustify-da-ignore'].some(marker => dep['#comment'].includes(marker))) { // #comment is an array or a string
 				ignore = true
 			}
 			if (dep['scope'] !== 'test') {

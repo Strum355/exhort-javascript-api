@@ -22,8 +22,8 @@ import Base_java, { ecosystem_gradle } from "./base_java.js";
 const ROOT_PROJECT_KEY_NAME = "root-project";
 
 
-const TRUSTIFY_DA_IGNORE_REGEX_LINE = /.*\s?exhortignore\s*$/g
-const TRUSTIFY_DA_IGNORE_REGEX = /\/\/\s?exhortignore/
+const TRUSTIFY_DA_IGNORE_REGEX_LINE = /.*\s?(exhortignore|trustify-da-ignore)\s*$/g
+const TRUSTIFY_DA_IGNORE_REGEX = /\/\/\s?(exhortignore|trustify-da-ignore)/
 
 /**
  * Check if the dependency marked for exclusion has libs notation , so if it's true the rest of coordinates( GAV) should be fetched from TOML file.
@@ -79,7 +79,6 @@ export default class Java_gradle extends Base_java {
 	 * @param {string} manifestPath - path to manifest
 	 * @returns {null}
 	 */
-	// eslint-disable-next-line no-unused-vars
 	readLicenseFromManifest(manifestPath) { return readLicenseFile(manifestPath); }
 
 	/**

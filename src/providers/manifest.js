@@ -59,11 +59,14 @@ export default class Manifest {
 
 	loadIgnored(content) {
 		let deps = [];
-		if(!content.exhortignore) {
+		// Prefer the new 'trustify-da-ignore' key, falling back to the legacy
+		// 'exhortignore' key for backwards compatibility.
+		let ignored = content['trustify-da-ignore'] || content.exhortignore;
+		if(!ignored) {
 			return deps;
 		}
-		for(let i = 0; i < content.exhortignore.length; i++) {
-			deps.push(toPurl("npm", content.exhortignore[i]));
+		for(let i = 0; i < ignored.length; i++) {
+			deps.push(toPurl("npm", ignored[i]));
 		}
 		return deps;
 	}
