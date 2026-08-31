@@ -90,10 +90,10 @@ export default class Java_gradle extends Base_java {
 	 */
 
 
-	provideStack(manifest, opts = {}) {
+	async provideStack(manifest, opts = {}) {
 		return {
 			ecosystem: ecosystem_gradle,
-			content: this.#createSbomStackAnalysis(manifest, opts),
+			content: await this.#createSbomStackAnalysis(manifest, opts),
 			contentType: 'application/vnd.cyclonedx+json'
 		}
 	}
@@ -105,10 +105,10 @@ export default class Java_gradle extends Base_java {
 	 * @returns {Provided}
 	 */
 
-	provideComponent(manifest, opts = {}) {
+	async provideComponent(manifest, opts = {}) {
 		return {
 			ecosystem: ecosystem_gradle,
-			content: this.#getSbomForComponentAnalysis(manifest, opts),
+			content: await this.#getSbomForComponentAnalysis(manifest, opts),
 			contentType: 'application/vnd.cyclonedx+json'
 		}
 	}
@@ -162,9 +162,10 @@ export default class Java_gradle extends Base_java {
 	 * @param {Sbom} sbom - the SBOM object to add dependencies to
 	 * @param {Set} processedDeps - set of already processed dependencies
 	 * @param {string} scope - the dependency scope
+	 * @param {Map<string, Array<{alg: string, content: string}>>} [hashMap] - map of "group:name@version" to CycloneDX hashes
 	 * @private
 	 */
-	#processDependencyTree(config, parentPurl, sbom, processedDeps, scope) {
+	#processDependencyTree(config, parentPurl, sbom, processedDeps, scope, hashMap) {
 		const processedLines = this.#prepareLinesForParsingDependencyTree(config);
 		let parentStack = [parentPurl];
 
@@ -186,7 +187,7 @@ export default class Java_gradle extends Base_java {
 				// Add dependency to SBOM if not already processed
 				if (!processedDeps.has(depKey)) {
 					processedDeps.add(depKey);
-					sbom.addDependency(currentParent, purl, scope);
+					sbom.addDependency(currentParent, purl, scope, hashMap?.get(purl.toString()));
 				}
 				parentStack.push(purl);
 			}
@@ -200,7 +201,7 @@ export default class Java_gradle extends Base_java {
 	 * @returns {string} the Dot Graph content
 	 * @private
 	 */
-	#buildSbom(content, properties, manifestPath, opts = {}) {
+	#buildSbom(content, properties, manifestPath, opts = {}, hashMap) {
 		let sbom = new Sbom();
 		let root = `${properties.group}:${properties[ROOT_PROJECT_KEY_NAME].match(/Root project '(.+)'/)[1]}:jar:${properties.version}`
 		let rootPurl = this.parseDep(root)
@@ -212,8 +213,8 @@ export default class Java_gradle extends Base_java {
 
 		const processedDeps = new Set();
 
-		this.#processDependencyTree(runtimeConfig, rootPurl, sbom, processedDeps, 'required');
-		this.#processDependencyTree(compileConfig, rootPurl, sbom, processedDeps, 'optional');
+		this.#processDependencyTree(runtimeConfig, rootPurl, sbom, processedDeps, 'required', hashMap);
+		this.#processDependencyTree(compileConfig, rootPurl, sbom, processedDeps, 'optional', hashMap);
 
 		return sbom.filterIgnoredDepsIncludingVersion(ignoredDeps).getAsJsonString(opts);
 	}
@@ -225,14 +226,15 @@ export default class Java_gradle extends Base_java {
 	 * @returns {string} the Dot Graph content
 	 * @private
 	 */
-	#createSbomStackAnalysis(manifest, opts = {}) {
+	async #createSbomStackAnalysis(manifest, opts = {}) {
 		let content = this.#getDependencies(manifest, opts)
 		let properties = this.#extractProperties(manifest, opts)
+		let hashMap = await this.parseGradleHashes(manifest, opts)
 		// read dependency tree from temp file
 		if (process.env["TRUSTIFY_DA_DEBUG"] === "true") {
 			console.log("Dependency tree that will be used as input for creating the BOM =>" + EOL + EOL + content)
 		}
-		let sbom = this.#buildSbom(content, properties, manifest, opts)
+		let sbom = this.#buildSbom(content, properties, manifest, opts, hashMap)
 		return sbom
 	}
 
@@ -279,11 +281,12 @@ export default class Java_gradle extends Base_java {
 	 * @returns {string} - sbom string of the direct dependencies of build.gradle
 	 * @private
 	 */
-	#getSbomForComponentAnalysis(manifestPath, opts = {}) {
+	async #getSbomForComponentAnalysis(manifestPath, opts = {}) {
 		let content = this.#getDependencies(manifestPath, opts)
 		let properties = this.#extractProperties(manifestPath, opts)
+		let hashMap = await this.parseGradleHashes(manifestPath, opts)
 
-		let sbom = this.#buildDirectDependenciesSbom(content, properties, manifestPath, opts)
+		let sbom = this.#buildDirectDependenciesSbom(content, properties, manifestPath, opts, hashMap)
 		return sbom
 
 	}
@@ -303,6 +306,110 @@ export default class Java_gradle extends Base_java {
 		} catch (error) {
 			throw new Error(`Couldn't run gradle dependencies command, error message returned from gradle binary => ${EOL} ${error.message}`)
 		}
+	}
+
+	/**
+	 * Hash a file using SHA-256 with streaming to handle large files efficiently.
+	 * @param {string} filePath - path to the file to hash
+	 * @returns {Promise<string>} hex-encoded SHA-256 digest
+	 * @private
+	 */
+	#hashFileStream(filePath) {
+		return new Promise((resolve, reject) => {
+			const hash = crypto.createHash('sha256')
+			const stream = fs.createReadStream(filePath)
+			stream.on('data', chunk => hash.update(chunk))
+			stream.on('end', () => resolve(hash.digest('hex')))
+			stream.on('error', reject)
+		})
+	}
+
+	/**
+	 * Compute SHA-256 hashes for the resolved artifacts of a Gradle manifest.
+	 *
+	 * Rather than scanning the local Gradle cache, this asks Gradle itself for
+	 * the resolved artifact files via an init script (mirroring the pattern used
+	 * by {@link discoverGradleSubprojects}), then hashes each file with the
+	 * Node.js `crypto` module. The result is keyed by the canonical PURL string
+	 * built via {@link Base_java#toPurl} — the same builder {@link parseDep} uses
+	 * for the lookup — so the stored key and the lookup key cannot drift.
+	 *
+	 * Degrades gracefully: if Gradle cannot be invoked, the init script fails, or
+	 * an artifact has no readable file (e.g. BOM/`platform()` dependencies), the
+	 * hash for that component is omitted rather than throwing. A warning is emitted
+	 * on every degradation path so incomplete hash coverage is visible even without
+	 * `TRUSTIFY_DA_DEBUG` (mirroring the pip/cargo providers).
+	 *
+	 * @param {string} manifest - path to build.gradle[.kts]
+	 * @param {{}} [opts={}] - optional various options to pass along the application
+	 * @returns {Promise<Map<string, Array<{alg: string, content: string}>>>} map of canonical PURL string to CycloneDX hashes
+	 */
+	async parseGradleHashes(manifest, opts = {}) {
+		const hashMap = new Map()
+		const debug = process.env["TRUSTIFY_DA_DEBUG"] === "true"
+
+		let gradle
+		try {
+			gradle = this.selectToolBinary(manifest, opts)
+		} catch (error) {
+			console.warn(`Gradle could not be invoked to compute artifact hashes, SBOM will be generated without hashes: ${error.stack || error.message}`)
+			return hashMap
+		}
+
+		const initScriptPath = path.join(os.tmpdir(), `da-list-hashes-${crypto.randomUUID()}.gradle`)
+		try {
+			fs.writeFileSync(initScriptPath, GRADLE_HASH_INIT_SCRIPT)
+			let output
+			try {
+				output = this._invokeCommand(gradle, [
+					'-q', '--no-daemon',
+					'--init-script', initScriptPath,
+					'daListHashes',
+				], { cwd: path.dirname(manifest) })
+			} catch (error) {
+				console.warn(`Gradle hash init script failed, SBOM will be generated without hashes: ${error.stack || error.message}`)
+				return hashMap
+			}
+
+			let attempted = 0
+			let missed = 0
+			for (const { id, file } of parseGradleHashScriptOutput(output.toString())) {
+				const coord = parseComponentId(id)
+				if (!coord) {
+					continue
+				}
+				// Build the key with the same canonical PURL builder parseDep uses for
+				// the lookup, so the stored key and the lookup key cannot drift.
+				const key = this.toPurl(coord.group, coord.name, coord.version).toString()
+				if (hashMap.has(key)) {
+					continue
+				}
+				attempted++
+				try {
+					const digest = await this.#hashFileStream(file)
+					hashMap.set(key, [{ alg: 'SHA-256', content: digest }])
+				} catch (error) {
+					// artifact file missing/unreadable — omit the hash for this component
+					missed++
+					if (debug) {
+						console.error(`Gradle hash: could not read artifact ${file} => ${error.message}`)
+					}
+				}
+			}
+			if (missed > 0) {
+				console.warn(`Gradle hash: ${missed} of ${attempted} resolved artifacts could not be read, SBOM will be generated without hashes for those components`)
+			}
+		} catch (error) {
+			// Unexpected failure (e.g. a programming error) is degraded to keep SBOM
+			// generation working, but the error is surfaced so it is not mistaken
+			// for ordinary graceful degradation.
+			console.warn(`Gradle artifact hashing failed, SBOM will be generated without hashes: ${error.stack || error.message}`)
+			return hashMap
+		} finally {
+			try { fs.unlinkSync(initScriptPath) } catch { /* ignore */ }
+		}
+
+		return hashMap
 	}
 
 	/**
@@ -355,7 +462,7 @@ export default class Java_gradle extends Base_java {
 	 * @param properties {Object} - properties of the gradle project.
 	 * @return {string} return sbom json string of the build.gradle manifest file
 	 */
-	#buildDirectDependenciesSbom(content, properties, manifestPath, opts = {}) {
+	#buildDirectDependenciesSbom(content, properties, manifestPath, opts = {}, hashMap) {
 		let sbom = new Sbom();
 		let root = `${properties.group}:${properties[ROOT_PROJECT_KEY_NAME].match(/Root project '(.+)'/)[1]}:jar:${properties.version}`
 		let rootPurl = this.parseDep(root)
@@ -372,7 +479,7 @@ export default class Java_gradle extends Base_java {
 		directDependencies.forEach((scope, dep) => {
 			const purl = this.parseDep(dep);
 			purl.scope = scope;
-			sbom.addDependency(rootPurl, purl, scope);
+			sbom.addDependency(rootPurl, purl, scope, hashMap?.get(purl.toString()));
 		});
 
 		return sbom.filterIgnoredDepsIncludingVersion(ignoredDeps).getAsJsonString(opts);
@@ -487,6 +594,30 @@ const GRADLE_INIT_SCRIPT = `allprojects {
 `
 
 /**
+ * Gradle init script that emits, per resolved module artifact, a structured line
+ * of the form `::DA_HASH::group:name:version::/absolute/file/path`. It obtains
+ * files from Gradle's resolution API (the same approach as the CycloneDX Gradle
+ * plugin) so it is robust to cache-layout changes and correctly reports
+ * classifiers and non-jar artifacts. Uses a lenient artifact view so
+ * unresolved/fileless artifacts are skipped rather than failing the build.
+ */
+const GRADLE_HASH_INIT_SCRIPT = `allprojects {
+    task daListHashes {
+        doLast {
+            configurations.findAll { it.canBeResolved }.each { cfg ->
+                cfg.incoming.artifactView { lenient = true }.artifacts.each { artifact ->
+                    def cid = artifact.id.componentIdentifier
+                    if (cid instanceof org.gradle.api.artifacts.component.ModuleComponentIdentifier) {
+                        println "::DA_HASH::\${cid.group}:\${cid.module}:\${cid.version}::\${artifact.file.absolutePath}"
+                    }
+                }
+            }
+        }
+    }
+}
+`
+
+/**
  * Discover all build.gradle[.kts] manifest paths in a Gradle multi-project build.
  * Uses a custom init script to get structured project listing.
  *
@@ -583,4 +714,53 @@ export function parseGradleInitScriptOutput(raw) {
 		}
 	}
 	return projects
+}
+
+/**
+ * Parse the structured output from the Gradle hash init script.
+ * Each recognised line has the form `::DA_HASH::group:name:version::<file-path>`.
+ *
+ * @param {string} raw - Raw stdout from gradle
+ * @returns {{ id: string, file: string }[]} component id (`group:name:version`) and absolute artifact file path
+ */
+export function parseGradleHashScriptOutput(raw) {
+	const artifacts = []
+	for (const rawLine of raw.split('\n')) {
+		const line = rawLine.trimEnd()
+		if (!line.startsWith('::DA_HASH::')) {
+			continue
+		}
+		const prefix = '::DA_HASH::'
+		const remainder = line.substring(prefix.length)
+		const lastSep = remainder.lastIndexOf('::')
+		if (lastSep < 0) {
+			continue
+		}
+		const id = remainder.substring(0, lastSep)
+		const file = remainder.substring(lastSep + 2)
+		if (id && file) {
+			artifacts.push({ id, file })
+		}
+	}
+	return artifacts
+}
+
+/**
+ * Parse a Gradle module component id (`group:name:version`) into its coordinate
+ * parts. The caller builds the canonical PURL key from these parts using the same
+ * builder {@link parseDep} uses, so the stored key and the lookup key cannot drift.
+ *
+ * @param {string} id - the Gradle component id
+ * @returns {{group: string, name: string, version: string}|null} the parsed coordinate, or null when the id is malformed
+ */
+export function parseComponentId(id) {
+	const parts = id.split(':')
+	if (parts.length < 3) {
+		return null
+	}
+	const [group, name, version] = parts
+	if (!group || !name || !version) {
+		return null
+	}
+	return { group, name, version }
 }
