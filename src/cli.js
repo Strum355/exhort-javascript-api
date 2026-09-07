@@ -8,6 +8,7 @@ import { hideBin } from 'yargs/helpers'
 
 import { getProjectLicense, getLicenseDetails } from './license/index.js'
 import { runRemediation } from './remediate.js'
+import { generateReport } from './remediation_report.js'
 
 import client, { selectTrustifyDABackend, generateSbom } from './index.js'
 
@@ -505,9 +506,22 @@ const remediate = {
 				dryRun: args['dry-run'],
 				providers: args.providers,
 				sources: args.sources,
-				groupBy: args['group-by'],
 			})
-			console.log(result.output)
+
+			if (result.remediations.length === 0 && result.manifests.length === 0) {
+				console.log('No supported manifest files found.')
+				process.exit(result.exitCode)
+			}
+
+			if (!args['dry-run'] && result.remediations.length > 0) {
+				const files = [...new Set(result.remediations.flatMap(r => r.files ?? []))]
+				console.log(`Updated ${files.length} file(s):`)
+				for (const file of files) {
+					console.log(`  ${file}`)
+				}
+				console.log('')
+			}
+			console.log(generateReport(result.remediations, { groupBy: args['group-by'] }))
 			process.exit(result.exitCode)
 		} catch (err) {
 			console.error(err.message)

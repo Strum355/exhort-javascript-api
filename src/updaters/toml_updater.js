@@ -12,7 +12,7 @@ import { parse as parseToml } from 'smol-toml'
  *
  * @param {string} tomlContent - raw TOML file content
  * @param {Array<{groupId: string, artifactId: string, newVersion: string}>} versionChanges
- * @returns {{content: string, applied: Array<{groupId: string, artifactId: string, newVersion: string, oldVersion: string}>, skipped: Array<{groupId: string, artifactId: string, newVersion: string, reason: string}>}}
+ * @returns {{content: string, applied: Array<{groupId: string, artifactId: string, newVersion: string, oldVersion: string, type: 'ref'|'inline', alias: string, versionRef?: string}>, skipped: Array<{groupId: string, artifactId: string, newVersion: string, reason: string}>}}
  */
 export function updateTomlVersions(tomlContent, versionChanges) {
 	const applied = []
@@ -88,7 +88,10 @@ export function updateTomlVersions(tomlContent, versionChanges) {
 				groupId: change.groupId,
 				artifactId: change.artifactId,
 				newVersion: change.newVersion,
-				oldVersion
+				oldVersion,
+				type: 'ref',
+				versionRef,
+				alias
 			})
 		} else {
 			const inlineVersion = getInlineVersion(libEntry)
@@ -119,7 +122,9 @@ export function updateTomlVersions(tomlContent, versionChanges) {
 					groupId: change.groupId,
 					artifactId: change.artifactId,
 					newVersion: change.newVersion,
-					oldVersion: inlineVersion
+					oldVersion: inlineVersion,
+					type: 'inline',
+					alias
 				})
 			} else {
 				skipped.push({
