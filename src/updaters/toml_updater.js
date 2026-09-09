@@ -1,6 +1,35 @@
 import { parse as parseToml } from 'smol-toml'
 
 /**
+ * One entry in {@link updateTomlVersions}' `applied` list: a version that was changed and where.
+ * `type` discriminates the edit site — `'ref'` for a `[libraries]` entry pointing at a shared
+ * `[versions]` alias via `version.ref` (then `versionRef` names that alias), `'inline'` for a
+ * version declared directly on the library. `alias` is the library's catalog key in both cases.
+ * @typedef {{
+ *   groupId: string,
+ *   artifactId: string,
+ *   newVersion: string,
+ *   oldVersion: string,
+ *   type: ('ref'|'inline'),
+ *   alias: string,
+ *   versionRef?: string
+ * }} TomlAppliedChange
+ */
+
+/**
+ * Stable edit-site key for a TOML (Gradle version catalog) change: same key => same commit/PR.
+ * Deps sharing one `[versions]` alias via `version.ref` share the ref key and are inseparable.
+ * @param {string} manifestPath
+ * @param {TomlAppliedChange} applied
+ * @returns {string}
+ */
+export function tomlChangeKey(manifestPath, applied) {
+	return applied.type === 'ref'
+		? `toml:ref:${manifestPath}:${applied.versionRef}`
+		: `toml:inline:${manifestPath}:${applied.alias}`
+}
+
+/**
  * Updates dependency versions in a Gradle version catalog (libs.versions.toml) file.
  *
  * Supports two version declaration patterns:
@@ -11,8 +40,8 @@ import { parse as parseToml } from 'smol-toml'
  * on the raw content to preserve formatting and comments.
  *
  * @param {string} tomlContent - raw TOML file content
- * @param {Array<{groupId: string, artifactId: string, newVersion: string}>} versionChanges
- * @returns {{content: string, applied: Array<{groupId: string, artifactId: string, newVersion: string, oldVersion: string, type: 'ref'|'inline', alias: string, versionRef?: string}>, skipped: Array<{groupId: string, artifactId: string, newVersion: string, reason: string}>}}
+ * @param {import('../remediate.js').VersionChangeRequest[]} versionChanges
+ * @returns {{content: string, applied: TomlAppliedChange[], skipped: Array<{groupId: string, artifactId: string, newVersion: string, reason: string}>}}
  */
 export function updateTomlVersions(tomlContent, versionChanges) {
 	const applied = []

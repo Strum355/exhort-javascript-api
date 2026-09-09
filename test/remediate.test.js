@@ -149,6 +149,37 @@ suite('remediate — runRemediation', () => {
 				const updatedContent = fs.readFileSync(pomPath, 'utf-8')
 				expect(updatedContent).to.include('1.10.0')
 				expect(updatedContent).to.not.include('>1.9<')
+				// The written manifest is reported in appliedFiles
+				expect(result.appliedFiles).to.deep.equal([pomPath])
+			} finally {
+				cleanup()
+			}
+		})
+
+		/**
+		 * A dependency surfaced by analysis but not locatable in the manifest (e.g. a
+		 * transitive dep, or a version managed in a parent POM) yields a remediation but
+		 * no write. appliedFiles must stay empty so callers don't over-report "updated N
+		 * files" — the bug ruromero flagged where the CLI counted r.files instead.
+		 */
+		test('omits from appliedFiles a manifest that received no write', async () => {
+			const { dir, cleanup } = createTempDir({ 'pom.xml': SAMPLE_POM })
+			try {
+				const pomPath = path.join(dir, 'pom.xml')
+				matchStub.returns({ provideStack: stub().resolves({ content: '{}', contentType: 'application/json', ecosystem: 'maven' }) })
+				// A vulnerable dep that is NOT declared in SAMPLE_POM — the updater applies nothing.
+				requestStackStub.resolves(buildAnalysisReport({
+					depRef: 'pkg:maven/com.transitive/deep-lib@1.0',
+					fixedIn: 'pkg:maven/com.transitive/deep-lib@1.1',
+				}))
+
+				const before = fs.readFileSync(pomPath, 'utf-8')
+				const result = await runRemediation(pomPath, {})
+
+				// The remediation is still reported, but nothing was written.
+				expect(result.remediations.length).to.be.greaterThan(0)
+				expect(result.appliedFiles).to.deep.equal([])
+				expect(fs.readFileSync(pomPath, 'utf-8')).to.equal(before)
 			} finally {
 				cleanup()
 			}
@@ -497,6 +528,40 @@ suite('remediate — runRemediation', () => {
 				const result = await runRemediation(pomPath, { dryRun: true })
 
 				expect(result.remediations[0].changes).to.equal(undefined)
+			} finally {
+				cleanup()
+			}
+		})
+
+		/**
+		 * Real-world scenario: stack analysis reports a vulnerable *transitive* dependency
+		 * — present in the resolved tree but not declared in pom.xml. The isolated updater
+		 * finds nothing to change for it, so it must be dropped rather than returned with an
+		 * absent `changes` array; otherwise a caller iterating `remediation.changes` to build
+		 * one PR per dependency would crash on `undefined`.
+		 */
+		test('drops a vulnerable transitive dependency absent from the manifest', async () => {
+			const { dir, cleanup } = createTempDir({ 'pom.xml': SAMPLE_POM })
+			try {
+				const pomPath = path.join(dir, 'pom.xml')
+				matchStub.returns({ provideStack: stub().resolves({ content: '{}', contentType: 'application/json', ecosystem: 'maven' }) })
+				// commons-text is declared directly (fixable); deep-lib is a transitive dep
+				// surfaced by analysis but not present in pom.xml (unfixable in this manifest).
+				requestStackStub.resolves(buildMultiDepReport([
+					{ depRef: 'pkg:maven/org.apache.commons/commons-text@1.9', fixedIn: 'pkg:maven/org.apache.commons/commons-text@1.10.0', issueId: 'CVE-2022-42889' },
+					{ depRef: 'pkg:maven/com.transitive/deep-lib@1.0', fixedIn: 'pkg:maven/com.transitive/deep-lib@1.1', issueId: 'CVE-2023-9999' },
+				]))
+
+				const result = await runRemediation(pomPath, { dryRun: true, perDependencyChanges: true })
+
+				// Only the directly-declared dependency survives; the transitive one is dropped.
+				expect(result.remediations).to.have.lengthOf(1)
+				expect(result.remediations[0].artifactId).to.equal('commons-text')
+
+				// Every returned remediation carries a usable changes array, so a caller can
+				// build isolated PRs without a guard and without crashing on `undefined`.
+				expect(result.remediations.every(r => Array.isArray(r.changes) && r.changes.length > 0)).to.equal(true)
+				expect(() => result.remediations.flatMap(r => r.changes)).to.not.throw()
 			} finally {
 				cleanup()
 			}

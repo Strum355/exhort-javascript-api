@@ -513,15 +513,14 @@ const remediate = {
 				process.exit(result.exitCode)
 			}
 
-			if (!args['dry-run'] && result.remediations.length > 0) {
-				const files = [...new Set(result.remediations.flatMap(r => r.files ?? []))]
-				console.log(`Updated ${files.length} file(s):`)
-				for (const file of files) {
+			if (!args['dry-run'] && result.appliedFiles.length > 0) {
+				console.log(`Updated ${result.appliedFiles.length} file(s):`)
+				for (const file of result.appliedFiles) {
 					console.log(`  ${file}`)
 				}
 				console.log('')
 			}
-			console.log(generateReport(result.remediations, { groupBy: args['group-by'] }))
+			console.log(generateReport(result.remediations, { groupBy: args['group-by'], dryRun: args['dry-run'] }))
 			process.exit(result.exitCode)
 		} catch (err) {
 			console.error(err.message)

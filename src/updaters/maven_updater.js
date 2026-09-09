@@ -188,6 +188,32 @@ function resolvePropertyChain(propName, properties, visited = new Set()) {
 }
 
 /**
+ * One entry in {@link updateMavenVersions}' `applied` list: a version that was changed and
+ * where. `type` discriminates the edit site — `'direct'` for a dependency's own `<version>`,
+ * `'property'` for a `${property}` reference (then `property` names the resolved property).
+ * @typedef {{
+ *   groupId: string,
+ *   artifactId: string,
+ *   newVersion: string,
+ *   type: ('direct'|'property'),
+ *   property?: string
+ * }} MavenAppliedChange
+ */
+
+/**
+ * Stable edit-site key for a Maven change: same key => same commit/PR. Deps whose versions
+ * resolve to one `${property}` share the property key and are therefore inseparable.
+ * @param {string} manifestPath
+ * @param {MavenAppliedChange} applied
+ * @returns {string}
+ */
+export function mavenChangeKey(manifestPath, applied) {
+	return applied.type === 'property'
+		? `mvn:prop:${manifestPath}:${applied.property}`
+		: `mvn:direct:${manifestPath}:${applied.groupId}:${applied.artifactId}`
+}
+
+/**
  * Updates dependency versions in a Maven pom.xml while preserving file formatting.
  *
  * Uses `fast-xml-parser` to understand the XML structure (dependencies and properties),
@@ -199,9 +225,8 @@ function resolvePropertyChain(propName, properties, visited = new Set()) {
  * and updates the terminal property value in `<properties>` instead.
  *
  * @param {string} pomContent - the raw pom.xml file content
- * @param {Array<{groupId: string, artifactId: string, newVersion: string}>} versionChanges -
- *   list of version changes to apply
- * @returns {{content: string, applied: Array, skipped: Array}} the updated content and
+ * @param {import('../remediate.js').VersionChangeRequest[]} versionChanges - list of version changes to apply
+ * @returns {{content: string, applied: MavenAppliedChange[], skipped: Array<{groupId: string, artifactId: string, newVersion: string, reason: string}>}} the updated content and
  *   lists of applied and skipped changes
  */
 export function updateMavenVersions(pomContent, versionChanges) {

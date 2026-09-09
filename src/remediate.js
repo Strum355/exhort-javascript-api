@@ -4,26 +4,45 @@ import path from 'node:path'
 import analysis from './analysis.js'
 import { availableProviders, match } from './provider.js'
 import { extractRemediations } from './remediation.js'
-import { updateMavenVersions } from './updaters/maven_updater.js'
-import { updateTomlVersions } from './updaters/toml_updater.js'
+import { mavenChangeKey, updateMavenVersions } from './updaters/maven_updater.js'
+import { tomlChangeKey, updateTomlVersions } from './updaters/toml_updater.js'
 
 import { selectTrustifyDABackend } from './index.js'
 
 // Mirrors DEFAULT_WORKSPACE_DISCOVERY_IGNORE in workspace.js
 const SKIP_DIRS = new Set(['node_modules', '.git'])
 
-const MANIFEST_TYPES = [
-	{
-		test: (basename) => basename === 'pom.xml',
-		updater: updateMavenVersions,
-		label: 'maven',
-	},
-	{
-		test: (basename) => basename.endsWith('.versions.toml') || basename === 'libs.versions.toml',
-		updater: updateTomlVersions,
-		label: 'toml',
-	},
-]
+/**
+ * A single version change requested from an updater: bump `groupId:artifactId` to `newVersion`.
+ * The input side of every updater; each updater's output side (its `applied` entries) is its own
+ * type — see {@link AppliedChange}.
+ * @typedef {{groupId: string, artifactId: string, newVersion: string}} VersionChangeRequest
+ */
+
+/**
+ * One entry from an updater's `applied` list, describing where and how a version was changed.
+ * Owned by the updater layer: the union of each updater's applied-entry shape. `changeKey`
+ * (per {@link ManifestType}) turns one of these into a stable edit-site identifier.
+ * @typedef {import('./updaters/maven_updater.js').MavenAppliedChange
+ *   | import('./updaters/toml_updater.js').TomlAppliedChange} AppliedChange
+ */
+
+/**
+ * The result of running an updater over a manifest's raw content.
+ * @typedef {{content: string, applied: AppliedChange[], skipped: Array<{groupId: string, artifactId: string, newVersion: string, reason: string}>}} UpdaterResult
+ */
+
+/**
+ * A supported manifest type and the operations that act on it.
+ * `changeKey` builds a stable edit-site key from a single `applied` entry, so callers can detect
+ * inseparable remediations (same key => same commit/PR).
+ * @typedef {{
+ *   test: (basename: string) => boolean,
+ *   updater: (content: string, versionChanges: VersionChangeRequest[]) => UpdaterResult,
+ *   label: ('maven'|'toml'),
+ *   changeKey: (manifestPath: string, applied: AppliedChange) => string
+ * }} ManifestType
+ */
 
 /**
  * An isolated, single-dependency edit to one manifest file.
@@ -33,7 +52,7 @@ const MANIFEST_TYPES = [
  *   `changeKey` are inseparable (e.g. two Maven deps whose versions resolve to the same `${property}`,
  *   or two Gradle libraries sharing one `version.ref`) and MUST land in the same commit/PR — the
  *   caller should union their CVEs/advisories.
- * @typedef {{ path: string, after: string, changeKey: string }} Change
+ * @typedef {{ path: string, after: string, changeKey: string }} DependencyFix
  */
 
 /**
@@ -52,36 +71,30 @@ const MANIFEST_TYPES = [
  *   severity: string,
  *   cves: string[],
  *   files: string[],
- *   changes?: Change[]
+ *   changes?: DependencyFix[]
  * }} Remediation
  */
 
-/**
- * Builds a stable edit-site key for an applied change, so callers can detect inseparable
- * remediations (same key => same commit/PR).
- * @param {string} label - manifest type label (`'maven'` | `'toml'`)
- * @param {string} manifestPath - the manifest the change targets
- * @param {object} applied - the updater's `applied[0]` entry for a single-dependency call
- * @returns {string}
- */
-function deriveChangeKey(label, manifestPath, applied) {
-	if (label === 'maven') {
-		return applied.type === 'property'
-			? `mvn:prop:${manifestPath}:${applied.property}`
-			: `mvn:direct:${manifestPath}:${applied.groupId}:${applied.artifactId}`
-	}
-	if (label === 'toml') {
-		return applied.type === 'ref'
-			? `toml:ref:${manifestPath}:${applied.versionRef}`
-			: `toml:inline:${manifestPath}:${applied.alias}`
-	}
-	throw new Error(`Cannot derive change key for unknown manifest label: ${label}`)
-}
+/** @type {ManifestType[]} */
+const MANIFEST_TYPES = [
+	{
+		test: (basename) => basename === 'pom.xml',
+		updater: updateMavenVersions,
+		label: 'maven',
+		changeKey: mavenChangeKey
+	},
+	{
+		test: (basename) => basename.endsWith('.versions.toml') || basename === 'libs.versions.toml',
+		updater: updateTomlVersions,
+		label: 'toml',
+		changeKey: tomlChangeKey
+	},
+]
 
 /**
  * Returns the manifest type descriptor for a given filename, or null if unsupported.
  * @param {string} basename - the file name to check
- * @returns {{test: function, updater: function, label: string}|null}
+ * @returns {ManifestType|null}
  */
 function getManifestType(basename) {
 	return MANIFEST_TYPES.find(t => t.test(basename)) || null
@@ -145,19 +158,21 @@ export function findManifests(targetPath) {
  * @param {string} [options.providers] - comma-separated provider list
  * @param {string} [options.sources] - comma-separated source list
  * @param {boolean} [options.perDependencyChanges=false] - when true, each remediation is populated with
- *   a `changes` array describing the isolated, single-dependency edit (see {@link Change}). This lets
+ *   a `changes` array describing the isolated, single-dependency edit (see {@link DependencyFix}). This lets
  *   callers create one commit/PR per dependency without attributing diff hunks themselves.
- * @returns {Promise<{exitCode: number, remediations: Remediation[], manifests: string[]}>} exitCode is 2 for a dry-run that
- *   found remediations (nothing written), 0 otherwise. `remediations` is the structured, per-manifest
- *   list of applicable updates — each entry carries the originating manifest path(s) in `files` so
- *   callers can group and create per-dependency changes.
+ * @returns {Promise<{exitCode: number, remediations: Remediation[], manifests: string[], appliedFiles: string[]}>}
+ *   exitCode is 2 for a dry-run that found remediations (nothing written), 0 otherwise. `remediations`
+ *   is the structured, per-manifest list of applicable updates — each entry carries the originating
+ *   manifest path(s) in `files` so callers can group and create per-dependency changes. `appliedFiles`
+ *   lists only the manifests actually written to disk (empty on a dry-run), so callers can report a
+ *   truthful "updated N files" count without conflating "had remediations" with "was written".
  */
 export async function runRemediation(targetPath, options = {}) {
 	const { dryRun = false, providers, sources, perDependencyChanges = false } = options
 
 	const manifestPaths = findManifests(targetPath)
 	if (manifestPaths.length === 0) {
-		return { exitCode: 0, remediations: [], manifests: manifestPaths }
+		return { exitCode: 0, remediations: [], manifests: manifestPaths, appliedFiles: [] }
 	}
 
 	const opts = {}
@@ -170,6 +185,7 @@ export async function runRemediation(targetPath, options = {}) {
 
 	const url = selectTrustifyDABackend(opts)
 	const allRemediations = []
+	const appliedFiles = []
 
 	for (const manifestPath of manifestPaths) {
 		const basename = path.basename(manifestPath)
@@ -206,6 +222,12 @@ export async function runRemediation(targetPath, options = {}) {
 		const originalContent = needsContent ? fs.readFileSync(manifestPath, 'utf-8') : null
 
 		if (perDependencyChanges) {
+			// With per-dependency changes every returned remediation must carry an isolated
+			// edit. A dependency the updater cannot locate in this manifest — e.g. a vulnerable
+			// *transitive* dependency surfaced by analysis but not declared here — yields no
+			// applied change, so it is dropped rather than returned with an absent `changes`
+			// array (which would crash callers that iterate `remediation.changes` to build PRs).
+			const applicable = []
 			for (const remediation of remediations) {
 				const isolated = manifestType.updater(originalContent, [{
 					groupId: remediation.groupId,
@@ -213,19 +235,19 @@ export async function runRemediation(targetPath, options = {}) {
 					newVersion: remediation.fixedInVersion,
 				}])
 				if (isolated.applied.length === 0) {
-					// Dependency not found, already at target, or otherwise unchangeable:
-					// emit no change so the caller creates no PR for it.
 					continue
 				}
 				remediation.changes = [{
 					path: manifestPath,
 					after: isolated.content,
-					changeKey: deriveChangeKey(manifestType.label, manifestPath, isolated.applied[0]),
+					changeKey: manifestType.changeKey(manifestPath, isolated.applied[0])
 				}]
+				applicable.push(remediation)
 			}
+			allRemediations.push(...applicable)
+		} else {
+			allRemediations.push(...remediations)
 		}
-
-		allRemediations.push(...remediations)
 
 		if (!dryRun) {
 			// Disk receives the union of every dependency's fix. When
@@ -238,14 +260,15 @@ export async function runRemediation(targetPath, options = {}) {
 			})))
 			if (result.applied.length > 0) {
 				fs.writeFileSync(manifestPath, result.content, 'utf-8')
+				appliedFiles.push(manifestPath)
 			}
 		}
 	}
 
 	if (allRemediations.length === 0) {
-		return { exitCode: 0, remediations: [], manifests: manifestPaths }
+		return { exitCode: 0, remediations: [], manifests: manifestPaths, appliedFiles }
 	}
 
 	// Dry-run signals "changes available but not written" via exit code 2.
-	return { exitCode: dryRun ? 2 : 0, remediations: allRemediations, manifests: manifestPaths }
+	return { exitCode: dryRun ? 2 : 0, remediations: allRemediations, manifests: manifestPaths, appliedFiles }
 }
