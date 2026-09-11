@@ -56,23 +56,14 @@ const SKIP_DIRS = new Set(['node_modules', '.git'])
  */
 
 /**
- * A single applicable remediation, as produced by `extractRemediations` and enriched by
- * `runRemediation` with the originating manifest path(s) and (optionally) per-dependency changes.
- * @typedef {{
- *   purl: string,
- *   groupId: string,
- *   artifactId: string,
- *   currentVersion: string,
- *   fixedInVersion: string,
- *   fixedInPurl: string,
- *   provider: string,
- *   source: string,
- *   advisories: Array<{id: string, url: string}>,
- *   severity: string,
- *   cves: string[],
+ * A remediation grounded in the scanned workspace: the canonical
+ * {@link import('./remediation.js').Remediation} base as produced by `extractRemediations`, enriched
+ * by `runRemediation` with the originating manifest path(s) in `files` (always present) and,
+ * optionally, the isolated per-dependency edits in `changes`.
+ * @typedef {import('./remediation.js').Remediation & {
  *   files: string[],
  *   changes?: DependencyFix[]
- * }} Remediation
+ * }} AppliedRemediation
  */
 
 /** @type {ManifestType[]} */
@@ -161,7 +152,7 @@ export function findManifests(targetPath) {
  * @param {boolean} [options.perDependencyChanges=false] - when true, each remediation is populated with
  *   a `changes` array describing the isolated, single-dependency edit (see {@link DependencyFix}). This lets
  *   callers create one commit/PR per dependency without attributing diff hunks themselves.
- * @returns {Promise<{exitCode: number, output: string, remediations: Remediation[], manifests: string[], appliedFiles: string[]}>}
+ * @returns {Promise<{exitCode: number, remediations: AppliedRemediation[], manifests: string[], appliedFiles: string[]}>}
  *   exitCode is 2 for a dry-run that found remediations (nothing written), 0 otherwise. `remediations`
  *   is the structured, per-manifest list of applicable updates — each entry carries the originating
  *   manifest path(s) in `files` so callers can group and create per-dependency changes. `appliedFiles`
@@ -216,7 +207,7 @@ export async function runRemediation(targetPath, options = {}) {
 
 		// Tag each remediation with the manifest it came from so callers can group
 		// changes per dependency across a multi-manifest workspace.
-		for (const remediation of remediations) {
+		for (const remediation of /** @type {AppliedRemediation[]} */ (remediations)) {
 			remediation.files = [manifestPath]
 		}
 

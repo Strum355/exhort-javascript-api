@@ -366,7 +366,7 @@ suite('remediate — runRemediation', () => {
 
 	suite('structured output', () => {
 		/** Verifies that runRemediation returns the full structured remediation shape. */
-		test('returns structured remediations with cves, severity, provider and files', async () => {
+		test('returns structured remediations with vulnerabilities, provider and files', async () => {
 			const { dir, cleanup } = createTempDir({ 'pom.xml': SAMPLE_POM })
 			try {
 				const pomPath = path.join(dir, 'pom.xml')
@@ -382,8 +382,9 @@ suite('remediate — runRemediation', () => {
 				expect(rem.artifactId).to.equal('commons-text')
 				expect(rem.currentVersion).to.equal('1.9')
 				expect(rem.fixedInVersion).to.equal('1.10.0')
-				expect(rem.severity).to.equal('CRITICAL')
-				expect(rem.cves).to.deep.equal(['CVE-2022-42889'])
+				expect(rem.vulnerabilities).to.have.lengthOf(1)
+				expect(rem.vulnerabilities[0].id).to.equal('CVE-2022-42889')
+				expect(rem.vulnerabilities[0].severity).to.equal('CRITICAL')
 				expect(rem.provider).to.equal('redhat')
 				expect(rem.files).to.deep.equal([pomPath])
 			} finally {

@@ -80,7 +80,6 @@ export {
  * TRUSTIFY_DA_SOURCE?: string | undefined,
  * TRUSTIFY_DA_TOKEN?: string | undefined,
  * TRUSTIFY_DA_TELEMETRY_ID?: string | undefined,
- * TRUSTIFY_DA_WORKSPACE_DIR?: string | undefined,
  * batchConcurrency?: number | undefined,
  * TRUSTIFY_DA_BATCH_CONCURRENCY?: string | undefined,
  * workspaceDiscoveryIgnore?: string[] | undefined,

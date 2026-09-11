@@ -3,14 +3,12 @@
  * markdown for PR bodies, CLI dry-run output, and JSON.
  */
 
-import { SEVERITY_ORDER } from './remediation.js'
+import { SEVERITY_ORDER, maxSeverity } from './remediation.js'
 
 /**
  * Generates a formatted report from an array of remediation entries.
  *
- * @param {Array<{purl: string, groupId: string, artifactId: string, currentVersion: string,
- *   fixedInVersion: string, fixedInPurl: string, provider: string, source: string,
- *   advisories: Array<{id: string, url: string}>, severity: string, cves: string[]}>} remediations
+ * @param {import('./remediation.js').Remediation[]} remediations
  * @param {object} [options]
  * @param {'dependency'|'bundle'} [options.groupBy='dependency'] - grouping strategy
  * @param {'markdown'|'json'} [options.format='markdown'] - output format
@@ -41,7 +39,11 @@ export function generateReport(remediations, options = {}) {
 
 /**
  * Generates a per-dependency markdown report with one section per remediation entry.
- * @param {Array<object>} remediations
+ *
+ * Each vulnerability row is rendered from its own per-CVE severity and advisories
+ * (from `rem.vulnerabilities`), so a Moderate CVE is no longer inflated to the
+ * dependency's max severity.
+ * @param {import('./remediation.js').Remediation[]} remediations
  * @returns {string}
  */
 function generatePerDependencyReport(remediations) {
@@ -57,14 +59,14 @@ function generatePerDependencyReport(remediations) {
 			'',
 		]
 
-		if (rem.cves && rem.cves.length > 0) {
+		const vulnerabilities = rem.vulnerabilities || []
+		if (vulnerabilities.length > 0) {
 			lines.push('### Vulnerabilities resolved')
 			lines.push('')
 			lines.push('| CVE | Severity | Advisory |')
 			lines.push('| --- | --- | --- |')
-			const advisoryLinks = formatAdvisoryLinks(rem.advisories)
-			for (const cve of rem.cves) {
-				lines.push(`| ${cve} | ${rem.severity} | ${advisoryLinks} |`)
+			for (const v of vulnerabilities) {
+				lines.push(`| ${v.id} | ${v.severity} | ${formatAdvisoryLinks(v.advisories)} |`)
 			}
 		}
 
@@ -76,7 +78,7 @@ function generatePerDependencyReport(remediations) {
 
 /**
  * Generates a bundled markdown report grouping all remediations by severity.
- * @param {Array<object>} remediations
+ * @param {import('./remediation.js').Remediation[]} remediations
  * @returns {string}
  */
 function generateBundledReport(remediations) {
@@ -99,8 +101,9 @@ function generateBundledReport(remediations) {
 			const depName = rem.groupId
 				? `${rem.groupId}:${rem.artifactId}`
 				: rem.artifactId
-			const cves = (rem.cves || []).join(', ')
-			const advisoryLinks = formatAdvisoryLinks(rem.advisories)
+			const vulnerabilities = rem.vulnerabilities || []
+			const cves = vulnerabilities.map(v => v.id).join(', ')
+			const advisoryLinks = formatAdvisoryLinks(collectAdvisories(vulnerabilities))
 			lines.push(
 				`| ${depName} | ${rem.currentVersion} | ${rem.fixedInVersion}`
 				+ ` | ${rem.provider} | ${cves} | ${advisoryLinks} |`
@@ -115,7 +118,7 @@ function generateBundledReport(remediations) {
 
 /**
  * Generates a tabular dry-run summary of proposed changes.
- * @param {Array<object>} remediations
+ * @param {import('./remediation.js').Remediation[]} remediations
  * @returns {string}
  */
 function generateDryRunReport(remediations) {
@@ -132,7 +135,7 @@ function generateDryRunReport(remediations) {
 			: rem.artifactId
 		lines.push(
 			`| ${depName} | ${rem.currentVersion} | ${rem.fixedInVersion}`
-			+ ` | ${rem.severity} | ${rem.provider} |`
+			+ ` | ${maxSeverity(rem.vulnerabilities)} | ${rem.provider} |`
 		)
 	}
 
@@ -141,7 +144,7 @@ function generateDryRunReport(remediations) {
 
 /**
  * Groups remediations by their severity.
- * @param {Array<object>} remediations
+ * @param {import('./remediation.js').Remediation[]} remediations
  * @returns {Map<string, Array<object>>}
  */
 function groupBySeverity(remediations) {
@@ -150,13 +153,32 @@ function groupBySeverity(remediations) {
 		map.set(severity, [])
 	}
 	for (const rem of remediations) {
-		const sev = rem.severity || 'UNKNOWN'
+		const sev = maxSeverity(rem.vulnerabilities)
 		if (!map.has(sev)) {
 			map.set(sev, [])
 		}
 		map.get(sev).push(rem)
 	}
 	return map
+}
+
+/**
+ * Collects the de-duplicated union of advisories across a list of vulnerabilities.
+ * @param {Array<{advisories: Array<{id: string, url: string}>}>} vulnerabilities
+ * @returns {Array<{id: string, url: string}>}
+ */
+function collectAdvisories(vulnerabilities) {
+	const merged = []
+	const seen = new Set()
+	for (const v of vulnerabilities) {
+		for (const adv of v.advisories || []) {
+			if (!seen.has(adv.id)) {
+				seen.add(adv.id)
+				merged.push(adv)
+			}
+		}
+	}
+	return merged
 }
 
 /**

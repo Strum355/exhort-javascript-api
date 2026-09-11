@@ -17,9 +17,11 @@ function buildRemediation(overrides = {}) {
 		fixedInPurl: 'pkg:maven/org.apache.commons/commons-text@1.10.0',
 		provider: 'trusted-content',
 		source: 'redhat',
-		advisories: [{ id: 'RHSA-2022:001', url: 'https://access.redhat.com/errata/RHSA-2022:001' }],
-		severity: 'CRITICAL',
-		cves: ['CVE-2022-42889'],
+		vulnerabilities: [{
+			id: 'CVE-2022-42889',
+			severity: 'CRITICAL',
+			advisories: [{ id: 'RHSA-2022:001', url: 'https://access.redhat.com/errata/RHSA-2022:001' }],
+		}],
 		...overrides,
 	}
 }
@@ -50,7 +52,10 @@ suite('remediation report generator', () => {
 		test('renders one row per CVE in the vulnerability table', () => {
 			// Given a remediation entry with two CVEs
 			const remediations = [buildRemediation({
-				cves: ['CVE-2022-42889', 'CVE-2023-99999'],
+				vulnerabilities: [
+					{ id: 'CVE-2022-42889', severity: 'CRITICAL', advisories: [] },
+					{ id: 'CVE-2023-99999', severity: 'HIGH', advisories: [] },
+				],
 			})]
 
 			// When generating the report
@@ -72,11 +77,9 @@ suite('remediation report generator', () => {
 					artifactId: 'lib',
 					currentVersion: '1.0.0',
 					fixedInVersion: '2.0.0',
-					severity: 'HIGH',
-					cves: ['CVE-2024-00001'],
 					provider: 'snyk',
 					source: 'snyk-db',
-					advisories: [],
+					vulnerabilities: [{ id: 'CVE-2024-00001', severity: 'HIGH', advisories: [] }],
 				}),
 			]
 
@@ -104,8 +107,7 @@ suite('remediation report generator', () => {
 					fixedInVersion: '4.17.21',
 					provider: 'snyk',
 					source: 'snyk-db',
-					cves: ['CVE-2021-23337'],
-					advisories: [],
+					vulnerabilities: [{ id: 'CVE-2021-23337', severity: 'HIGH', advisories: [] }],
 				}),
 			]
 
@@ -130,7 +132,11 @@ suite('remediation report generator', () => {
 		/** Verifies that advisories without URLs are rendered as plain text. */
 		test('renders advisories without URLs as plain text', () => {
 			const remediations = [buildRemediation({
-				advisories: [{ id: 'ADV-001', url: '' }],
+				vulnerabilities: [{
+					id: 'CVE-2022-42889',
+					severity: 'CRITICAL',
+					advisories: [{ id: 'ADV-001', url: '' }],
+				}],
 			})]
 
 			const report = generateReport(remediations)
@@ -141,11 +147,54 @@ suite('remediation report generator', () => {
 
 		/** Verifies that entries with no advisories show a dash placeholder. */
 		test('shows dash for entries with no advisories', () => {
-			const remediations = [buildRemediation({ advisories: [] })]
+			const remediations = [buildRemediation({
+				vulnerabilities: [{ id: 'CVE-2022-42889', severity: 'CRITICAL', advisories: [] }],
+			})]
 
 			const report = generateReport(remediations)
 
 			expect(report).to.include('| - |')
+		})
+
+		/** Verifies that each CVE row renders its OWN severity and advisories from vulnerabilities. */
+		test('renders per-CVE severity and advisories from vulnerabilities', () => {
+			// Given a remediation whose CVEs have distinct severities and advisories
+			const remediations = [buildRemediation({
+				vulnerabilities: [
+					{
+						id: 'CVE-2025-41242',
+						severity: 'MEDIUM',
+						advisories: [{ id: 'GHSA-mod', url: 'https://example.com/mod' }],
+					},
+					{
+						id: 'CVE-2024-99999',
+						severity: 'CRITICAL',
+						advisories: [{ id: 'GHSA-crit', url: 'https://example.com/crit' }],
+					},
+				],
+			})]
+
+			// When generating the per-dependency report
+			const report = generateReport(remediations)
+
+			// Then each row shows its own severity + advisory, not the dep-level max
+			expect(report).to.include(
+				'| CVE-2025-41242 | MEDIUM | [GHSA-mod](https://example.com/mod) |'
+			)
+			expect(report).to.include(
+				'| CVE-2024-99999 | CRITICAL | [GHSA-crit](https://example.com/crit) |'
+			)
+			// The moderate CVE must NOT be inflated to CRITICAL
+			expect(report).to.not.include('| CVE-2025-41242 | CRITICAL |')
+		})
+
+		/** Verifies the update heading renders the fix version. */
+		test('renders the fix version in the update heading', () => {
+			const remediations = [buildRemediation({ fixedInVersion: '1.10.0' })]
+
+			const report = generateReport(remediations)
+
+			expect(report).to.include('1.9 → 1.10.0')
 		})
 	})
 
@@ -154,18 +203,16 @@ suite('remediation report generator', () => {
 		test('groups all remediations by severity in a single document', () => {
 			// Given remediations with different severities
 			const remediations = [
-				buildRemediation({ severity: 'CRITICAL' }),
+				buildRemediation(),
 				buildRemediation({
 					purl: 'pkg:maven/com.example/lib@1.0.0',
 					groupId: 'com.example',
 					artifactId: 'lib',
 					currentVersion: '1.0.0',
 					fixedInVersion: '2.0.0',
-					severity: 'HIGH',
-					cves: ['CVE-2024-00001'],
 					provider: 'snyk',
 					source: 'snyk-db',
-					advisories: [],
+					vulnerabilities: [{ id: 'CVE-2024-00001', severity: 'HIGH', advisories: [] }],
 				}),
 			]
 
@@ -200,7 +247,9 @@ suite('remediation report generator', () => {
 
 		/** Verifies that empty severity groups are omitted. */
 		test('omits severity groups with no entries', () => {
-			const remediations = [buildRemediation({ severity: 'HIGH' })]
+			const remediations = [buildRemediation({
+				vulnerabilities: [{ id: 'CVE-2022-42889', severity: 'HIGH', advisories: [] }],
+			})]
 
 			const report = generateReport(remediations, { groupBy: 'bundle' })
 
@@ -224,10 +273,8 @@ suite('remediation report generator', () => {
 					artifactId: 'lib',
 					currentVersion: '1.0.0',
 					fixedInVersion: '2.0.0',
-					severity: 'HIGH',
 					provider: 'snyk',
-					cves: ['CVE-2024-00001'],
-					advisories: [],
+					vulnerabilities: [{ id: 'CVE-2024-00001', severity: 'HIGH', advisories: [] }],
 				}),
 			]
 
@@ -293,33 +340,33 @@ suite('remediation report generator', () => {
 		})
 	})
 
-	suite('null/undefined cves handling', () => {
-		/** Verifies that per-dependency report handles null cves without throwing. */
-		test('per-dependency report handles null cves', () => {
-			const remediations = [buildRemediation({ cves: null })]
+	suite('null/undefined vulnerabilities handling', () => {
+		/** Verifies that per-dependency report handles null vulnerabilities without throwing. */
+		test('per-dependency report handles null vulnerabilities', () => {
+			const remediations = [buildRemediation({ vulnerabilities: null })]
 			const report = generateReport(remediations)
 			expect(report).to.include('Security Update:')
 			expect(report).to.not.include('Vulnerabilities resolved')
 		})
 
-		/** Verifies that per-dependency report handles undefined cves without throwing. */
-		test('per-dependency report handles undefined cves', () => {
-			const remediations = [buildRemediation({ cves: undefined })]
+		/** Verifies that per-dependency report handles undefined vulnerabilities without throwing. */
+		test('per-dependency report handles undefined vulnerabilities', () => {
+			const remediations = [buildRemediation({ vulnerabilities: undefined })]
 			const report = generateReport(remediations)
 			expect(report).to.include('Security Update:')
 			expect(report).to.not.include('Vulnerabilities resolved')
 		})
 
-		/** Verifies that bundled report handles null cves without throwing. */
-		test('bundled report handles null cves', () => {
-			const remediations = [buildRemediation({ cves: null })]
+		/** Verifies that bundled report handles null vulnerabilities without throwing. */
+		test('bundled report handles null vulnerabilities', () => {
+			const remediations = [buildRemediation({ vulnerabilities: null })]
 			const report = generateReport(remediations, { groupBy: 'bundle' })
 			expect(report).to.include('# Security Update Summary')
 		})
 
-		/** Verifies that bundled report handles undefined cves without throwing. */
-		test('bundled report handles undefined cves', () => {
-			const remediations = [buildRemediation({ cves: undefined })]
+		/** Verifies that bundled report handles undefined vulnerabilities without throwing. */
+		test('bundled report handles undefined vulnerabilities', () => {
+			const remediations = [buildRemediation({ vulnerabilities: undefined })]
 			const report = generateReport(remediations, { groupBy: 'bundle' })
 			expect(report).to.include('# Security Update Summary')
 		})

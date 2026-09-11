@@ -1,6 +1,28 @@
 import { PackageURL } from 'packageurl-js'
 
 /**
+ * A single per-CVE vulnerability carried by a remediation: one CVE with its own severity and the
+ * advisories attributed to it.
+ * @typedef {{id: string, severity: string, advisories: Array<{id: string, url: string}>}} Vulnerability
+ */
+
+/**
+ * A single applicable remediation as produced by {@link extractRemediations}: a dependency, the
+ * version that fixes it, and the per-CVE `vulnerabilities` it resolves.
+ * @typedef {{
+ *   purl: string,
+ *   groupId: string,
+ *   artifactId: string,
+ *   currentVersion: string,
+ *   fixedInVersion: string,
+ *   fixedInPurl: string,
+ *   provider: string,
+ *   source: string,
+ *   vulnerabilities: Vulnerability[]
+ * }} Remediation
+ */
+
+/**
  * Extracts the major version segment from a version string.
  * @param {string} version
  * @returns {string} the first dot-separated segment
@@ -90,7 +112,9 @@ export const highestStrategy = {
  *   When omitted or empty, all providers are treated equally and the highest fix version wins.
  * @param {VersionStrategy} [options.versionStrategy] - version selection strategy with selectVersion
  *   and resolveConflict methods. Defaults to closestCoverageStrategy.
- * @returns {Array<{purl: string, groupId: string, artifactId: string, currentVersion: string, fixedInVersion: string, fixedInPurl: string, provider: string, source: string, advisories: Array<{id: string, url: string}>, severity: string, cves: string[]}>}
+ * @returns {Remediation[]} `vulnerabilities` is the sole source of vulnerability data — each entry
+ *   holds one CVE with its own severity and advisories. Use {@link maxSeverity} to derive a
+ *   dependency-level severity.
  */
 export function extractRemediations(analysisReport, options = {}) {
 	if (!analysisReport || !analysisReport.providers) {
@@ -216,7 +240,7 @@ function processIssueRemediation(issue, dep, providerName, sourceName, providerR
 	const existing = remediationsByDep.get(depPurl)
 
 	if (!existing) {
-		remediationsByDep.set(depPurl, {
+		const entry = {
 			purl: depPurl,
 			groupId: parsedDep.namespace || '',
 			artifactId: parsedDep.name,
@@ -225,20 +249,16 @@ function processIssueRemediation(issue, dep, providerName, sourceName, providerR
 			fixedInPurl,
 			provider: providerName,
 			source: sourceName,
-			advisories,
-			severity: severity.toUpperCase(),
-			cves: cveId ? [cveId] : [],
+			vulnerabilities: [],
 			_fromTrustedContent: isTrustedContent,
-		})
+		}
+		addVulnerability(entry, cveId, severity, advisories)
+		remediationsByDep.set(depPurl, entry)
 		rankByDep.set(depPurl, providerRank)
 		return
 	}
 
-	if (cveId && !existing.cves.includes(cveId)) {
-		existing.cves.push(cveId)
-	}
-
-	mergeAdvisories(existing.advisories, advisories)
+	addVulnerability(existing, cveId, severity, advisories)
 
 	const existingRank = rankByDep.get(depPurl)
 
@@ -247,7 +267,6 @@ function processIssueRemediation(issue, dep, providerName, sourceName, providerR
 		existing.fixedInPurl = fixedInPurl
 		existing.provider = providerName
 		existing.source = sourceName
-		existing.severity = higherSeverity(existing.severity, severity)
 		existing._fromTrustedContent = isTrustedContent
 		rankByDep.set(depPurl, providerRank)
 	} else if (providerRank === existingRank) {
@@ -262,7 +281,6 @@ function processIssueRemediation(issue, dep, providerName, sourceName, providerR
 			existing.source = sourceName
 			existing._fromTrustedContent = isTrustedContent
 		}
-		existing.severity = higherSeverity(existing.severity, severity)
 	}
 }
 
@@ -317,9 +335,7 @@ function extractFromRecommendations(providerReport, providerName, providerRank, 
 				fixedInPurl: recommendedPurl,
 				provider: providerName,
 				source: 'recommendation',
-				advisories: [],
-				severity: 'UNKNOWN',
-				cves: [],
+				vulnerabilities: [],
 			})
 			rankByDep.set(depPurl, providerRank)
 			continue
@@ -380,6 +396,33 @@ function getFixedInPurl(issue, depPurl, strategy, currentVersion) {
 		}
 	}
 	return undefined
+}
+
+/**
+ * Adds a per-CVE vulnerability entry to a remediation, deduplicating by CVE id. When the
+ * CVE is already present, the higher severity is kept and its advisories are merged.
+ * Issues without a CVE id contribute no vulnerability entry.
+ * @param {object} entry - remediation accumulator entry with a `vulnerabilities` array
+ * @param {string|undefined} cveId - the CVE identifier for this issue
+ * @param {string} severity - the issue's severity
+ * @param {Array<{id: string, url: string}>} advisories - advisories attributed to this issue
+ */
+function addVulnerability(entry, cveId, severity, advisories) {
+	if (!cveId) {
+		return
+	}
+	const normalizedSeverity = (severity || 'UNKNOWN').toUpperCase()
+	const existingVuln = entry.vulnerabilities.find(v => v.id === cveId)
+	if (existingVuln) {
+		existingVuln.severity = higherSeverity(existingVuln.severity, normalizedSeverity)
+		mergeAdvisories(existingVuln.advisories, advisories)
+		return
+	}
+	entry.vulnerabilities.push({
+		id: cveId,
+		severity: normalizedSeverity,
+		advisories: [...advisories],
+	})
 }
 
 /**
@@ -457,4 +500,14 @@ function higherSeverity(a, b) {
 	const indexA = SEVERITY_ORDER.indexOf(upperA)
 	const indexB = SEVERITY_ORDER.indexOf(upperB)
 	return indexA >= indexB ? upperA : upperB
+}
+
+/**
+ * Derives a dependency-level severity as the max across a list of vulnerabilities.
+ * Returns 'UNKNOWN' for an empty or missing list.
+ * @param {Array<{severity: string}>} [vulnerabilities]
+ * @returns {string}
+ */
+export function maxSeverity(vulnerabilities) {
+	return (vulnerabilities || []).reduce((acc, v) => higherSeverity(acc, v.severity), 'UNKNOWN')
 }

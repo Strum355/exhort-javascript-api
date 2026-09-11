@@ -1,6 +1,6 @@
 import { expect } from 'chai'
 
-import { extractRemediations, closestCoverageStrategy, highestStrategy } from '../src/remediation.js'
+import { extractRemediations, closestCoverageStrategy, highestStrategy, maxSeverity } from '../src/remediation.js'
 
 /**
  * Builds a minimal AnalysisReport with a single provider, source, dependency, and issue.
@@ -85,9 +85,12 @@ suite('remediation extractor', () => {
 			expect(result[0].groupId).to.equal('org.apache.commons')
 			expect(result[0].artifactId).to.equal('commons-text')
 			expect(result[0].currentVersion).to.equal('1.9')
-			expect(result[0].cves).to.deep.equal(['CVE-2022-42889'])
-			expect(result[0].advisories).to.deep.equal([
-				{ id: 'ADV-2022-001', url: 'https://example.com/ADV-2022-001' },
+			expect(result[0].vulnerabilities).to.deep.equal([
+				{
+					id: 'CVE-2022-42889',
+					severity: 'CRITICAL',
+					advisories: [{ id: 'ADV-2022-001', url: 'https://example.com/ADV-2022-001' }],
+				},
 			])
 		})
 
@@ -223,9 +226,10 @@ suite('remediation extractor', () => {
 			// Then a single entry should be returned with the highest version
 			expect(result).to.have.lengthOf(1)
 			expect(result[0].fixedInVersion).to.equal('1.11.0')
-			expect(result[0].cves).to.include('CVE-2022-42889')
-			expect(result[0].cves).to.include('CVE-2023-99999')
-			expect(result[0].cves).to.have.lengthOf(2)
+			const ids = result[0].vulnerabilities.map(v => v.id)
+			expect(ids).to.include('CVE-2022-42889')
+			expect(ids).to.include('CVE-2023-99999')
+			expect(ids).to.have.lengthOf(2)
 		})
 
 		/** Verifies that the highest severity is preserved across merged CVEs. */
@@ -246,7 +250,7 @@ suite('remediation extractor', () => {
 			const result = extractRemediations(report)
 
 			expect(result).to.have.lengthOf(1)
-			expect(result[0].severity).to.equal('CRITICAL')
+			expect(maxSeverity(result[0].vulnerabilities)).to.equal('CRITICAL')
 		})
 
 		/** Verifies that severity values are normalized to uppercase in output. */
@@ -258,7 +262,7 @@ suite('remediation extractor', () => {
 			const result = extractRemediations(report)
 
 			expect(result).to.have.lengthOf(1)
-			expect(result[0].severity).to.equal('CRITICAL')
+			expect(result[0].vulnerabilities[0].severity).to.equal('CRITICAL')
 		})
 	})
 
@@ -416,10 +420,125 @@ suite('remediation extractor', () => {
 			// Then the entry should have the recommendation's higher version but retain source CVEs
 			expect(result).to.have.lengthOf(1)
 			expect(result[0].fixedInVersion).to.equal('1.2.0')
-			expect(result[0].cves).to.deep.equal(['CVE-2024-11111'])
-			expect(result[0].advisories).to.deep.equal([
-				{ id: 'ADV-001', url: 'https://example.com/ADV-001' },
+			expect(result[0].vulnerabilities).to.deep.equal([
+				{
+					id: 'CVE-2024-11111',
+					severity: 'HIGH',
+					advisories: [{ id: 'ADV-001', url: 'https://example.com/ADV-001' }],
+				},
 			])
+		})
+	})
+
+	suite('per-CVE vulnerabilities', () => {
+		/** Verifies each issue contributes its own vulnerability entry with its own severity and advisories. */
+		test('carries per-CVE severity and advisories in vulnerabilities', () => {
+			// Given a dependency with two CVEs of differing severity, each with its own advisory
+			const report = buildReport({
+				issueId: 'CVE-2025-41242',
+				severity: 'MEDIUM',
+				fixedIn: ['pkg:maven/org.springframework/spring-webmvc@5.3.18'],
+				advisory: { id: 'GHSA-mod', url: 'https://example.com/mod' },
+				extraIssues: [{
+					id: 'CVE-2024-99999',
+					severity: 'CRITICAL',
+					remediation: {
+						fixedIn: ['pkg:maven/org.springframework/spring-webmvc@5.3.18'],
+						advisories: [{ advisory: { id: 'GHSA-crit', url: 'https://example.com/crit' } }],
+					},
+				}],
+			})
+			report.providers['provider-a'].sources['source-a'].dependencies[0].ref =
+				'pkg:maven/org.springframework/spring-webmvc@5.3.0'
+
+			// When extracting remediations
+			const result = extractRemediations(report)
+
+			// Then each CVE keeps its own severity and advisories
+			expect(result).to.have.lengthOf(1)
+			const vulns = result[0].vulnerabilities
+			expect(vulns).to.have.lengthOf(2)
+			const mod = vulns.find(v => v.id === 'CVE-2025-41242')
+			const crit = vulns.find(v => v.id === 'CVE-2024-99999')
+			expect(mod.severity).to.equal('MEDIUM')
+			expect(mod.advisories).to.deep.equal([{ id: 'GHSA-mod', url: 'https://example.com/mod' }])
+			expect(crit.severity).to.equal('CRITICAL')
+			expect(crit.advisories).to.deep.equal([{ id: 'GHSA-crit', url: 'https://example.com/crit' }])
+		})
+
+		/** Verifies the aggregate top-level severity is the max across vulnerabilities. */
+		test('aggregate severity is the max across vulnerabilities', () => {
+			const report = buildReport({
+				issueId: 'CVE-2025-41242',
+				severity: 'MEDIUM',
+				fixedIn: ['pkg:maven/org.apache.commons/commons-text@1.10.0'],
+				advisory: undefined,
+				extraIssues: [{
+					id: 'CVE-2024-99999',
+					severity: 'CRITICAL',
+					remediation: {
+						fixedIn: ['pkg:maven/org.apache.commons/commons-text@1.10.0'],
+					},
+				}],
+			})
+
+			const result = extractRemediations(report)
+
+			expect(result).to.have.lengthOf(1)
+			expect(maxSeverity(result[0].vulnerabilities)).to.equal('CRITICAL')
+			expect(result[0].vulnerabilities.map(v => v.id)).to.have.members([
+				'CVE-2025-41242', 'CVE-2024-99999',
+			])
+		})
+
+		/** Verifies a duplicate CVE id across sources merges advisories and keeps higher severity. */
+		test('deduplicates vulnerabilities by CVE id', () => {
+			const report = buildReport({
+				issueId: 'CVE-2022-42889',
+				severity: 'MEDIUM',
+				fixedIn: ['pkg:maven/org.apache.commons/commons-text@1.10.0'],
+				advisory: { id: 'ADV-1', url: 'https://example.com/1' },
+				extraIssues: [{
+					id: 'CVE-2022-42889',
+					severity: 'CRITICAL',
+					remediation: {
+						fixedIn: ['pkg:maven/org.apache.commons/commons-text@1.10.0'],
+						advisories: [{ advisory: { id: 'ADV-2', url: 'https://example.com/2' } }],
+					},
+				}],
+			})
+
+			const result = extractRemediations(report)
+
+			expect(result).to.have.lengthOf(1)
+			expect(result[0].vulnerabilities).to.have.lengthOf(1)
+			const vuln = result[0].vulnerabilities[0]
+			expect(vuln.id).to.equal('CVE-2022-42889')
+			expect(vuln.severity).to.equal('CRITICAL')
+			expect(vuln.advisories).to.have.deep.members([
+				{ id: 'ADV-1', url: 'https://example.com/1' },
+				{ id: 'ADV-2', url: 'https://example.com/2' },
+			])
+		})
+
+		/** Verifies a recommendation-only entry has an empty vulnerabilities list and derived UNKNOWN severity. */
+		test('recommendation-only entry has empty vulnerabilities and UNKNOWN severity', () => {
+			const report = buildReport({
+				fixedIn: null,
+				issueId: 'CVE-2024-00001',
+				recommendations: {
+					dependencies: [{
+						ref: 'pkg:maven/com.example/old-lib@1.0.0',
+						recommendation: { ref: 'pkg:maven/com.example/new-lib@2.0.0' },
+					}],
+				},
+			})
+
+			const result = extractRemediations(report)
+
+			const rec = result.find(r => r.purl === 'pkg:maven/com.example/old-lib@1.0.0')
+			expect(rec.vulnerabilities).to.deep.equal([])
+			expect(maxSeverity(rec.vulnerabilities)).to.equal('UNKNOWN')
 		})
 	})
 
@@ -444,10 +563,16 @@ suite('remediation extractor', () => {
 			expect(entry).to.have.property('fixedInPurl').that.is.a('string')
 			expect(entry).to.have.property('provider').that.is.a('string')
 			expect(entry).to.have.property('source').that.is.a('string')
-			expect(entry).to.have.property('advisories').that.is.an('array')
-			expect(entry).to.have.property('severity').that.is.a('string')
-			expect(entry).to.have.property('cves').that.is.an('array')
+			expect(entry).to.have.property('vulnerabilities').that.is.an('array')
+			expect(entry).to.not.have.property('severity')
+			expect(entry).to.not.have.property('cves')
+			expect(entry).to.not.have.property('advisories')
 			expect(entry).to.not.have.property('_priority')
+			expect(entry).to.not.have.property('_fromTrustedContent')
+			// vulnerabilities carry per-CVE shape
+			expect(entry.vulnerabilities[0]).to.have.property('id').that.is.a('string')
+			expect(entry.vulnerabilities[0]).to.have.property('severity').that.is.a('string')
+			expect(entry.vulnerabilities[0]).to.have.property('advisories').that.is.an('array')
 		})
 	})
 })
@@ -607,9 +732,10 @@ suite('version selection strategies', () => {
 			// Then same-major version should be preferred
 			expect(result).to.have.lengthOf(1)
 			expect(result[0].fixedInVersion).to.equal('2.13.9.Final-redhat-00003')
-			expect(result[0].cves).to.include('CVE-2025-1634')
-			expect(result[0].cves).to.include('CVE-2023-6267')
-			expect(result[0].cves).to.include('CVE-2023-5675')
+			const ids = result[0].vulnerabilities.map(v => v.id)
+			expect(ids).to.include('CVE-2025-1634')
+			expect(ids).to.include('CVE-2023-6267')
+			expect(ids).to.include('CVE-2023-5675')
 		})
 
 		/** Verifies highestStrategy picks highest version across all CVEs. */
