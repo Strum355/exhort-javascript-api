@@ -10,10 +10,14 @@ function getMajorVersion(version) {
 }
 
 /**
+ * @typedef {{selectVersion: (fixedInVersions: string[], currentVersion: string) => string, resolveConflict: (existing: ConflictCandidate, candidate: ConflictCandidate) => 'existing'|'candidate'}} VersionStrategy
+ */
+
+/**
  * Version selection strategy that prefers the closest compatible version
  * within the same major version stream. Falls back to the lowest cross-major
  * version when no same-major option exists.
- * @type {{selectVersion: function(string[], string): string, resolveConflict: function(object, object): string}}
+ * @type {VersionStrategy}
  */
 export const closestCoverageStrategy = {
 	selectVersion(fixedInVersions, currentVersion) {
@@ -51,7 +55,7 @@ export const closestCoverageStrategy = {
  * Version selection strategy that always picks the highest version regardless
  * of major version distance. Guarantees maximum CVE coverage but may produce
  * large version jumps. This is the original behavior before pluggable strategies.
- * @type {{selectVersion: function(string[], string): string, resolveConflict: function(object, object): string}}
+ * @type {VersionStrategy}
  */
 export const highestStrategy = {
 	selectVersion(fixedInVersions) {
@@ -79,12 +83,12 @@ export const highestStrategy = {
  * version selection strategy to resolve conflicts. Dependencies with no remediation
  * data are skipped.
  *
- * @param {object} analysisReport - raw DA AnalysisReport JSON response
+ * @param {import('@trustify-da/trustify-da-api-model/model/v5/AnalysisReport.ts').AnalysisReport} analysisReport - raw DA AnalysisReport JSON response
  * @param {object} [options] - extraction options
  * @param {string[]} [options.providerPriority] - provider names in descending priority order.
  *   The first entry has the highest priority. Providers not listed share the lowest priority.
  *   When omitted or empty, all providers are treated equally and the highest fix version wins.
- * @param {object} [options.versionStrategy] - version selection strategy with selectVersion
+ * @param {VersionStrategy} [options.versionStrategy] - version selection strategy with selectVersion
  *   and resolveConflict methods. Defaults to closestCoverageStrategy.
  * @returns {Array<{purl: string, groupId: string, artifactId: string, currentVersion: string, fixedInVersion: string, fixedInPurl: string, provider: string, source: string, advisories: Array<{id: string, url: string}>, severity: string, cves: string[]}>}
  */
@@ -95,6 +99,7 @@ export function extractRemediations(analysisReport, options = {}) {
 
 	const priorityMap = buildPriorityMap(options.providerPriority)
 	const strategy = options.versionStrategy || closestCoverageStrategy
+	/** @type {Map<string, Remediation & { _fromTrustedContent?: boolean}>} */
 	const remediationsByDep = new Map()
 	const rankByDep = new Map()
 
@@ -131,12 +136,12 @@ function buildPriorityMap(providerPriority) {
 
 /**
  * Extracts remediations from the sources/dependencies/issues tree of a provider report.
- * @param {object} providerReport
+ * @param {import('@trustify-da/trustify-da-api-model/model/v5/ProviderReport.js').ProviderReport} providerReport
  * @param {string} providerName
  * @param {number} providerRank - numeric priority rank for this provider
- * @param {Map<string, object>} remediationsByDep - accumulator keyed by dependency PURL
+ * @param {Map<string, Remediation & { _fromTrustedContent?: boolean }>} remediationsByDep - accumulator keyed by dependency PURL
  * @param {Map<string, number>} rankByDep - tracks current winning rank per dependency
- * @param {object} strategy - version selection strategy
+ * @param {VersionStrategy} strategy - version selection strategy
  */
 function extractFromSources(providerReport, providerName, providerRank, remediationsByDep, rankByDep, strategy) {
 	if (!providerReport.sources) {
@@ -162,14 +167,14 @@ function extractFromSources(providerReport, providerName, providerRank, remediat
 
 /**
  * Processes a single issue's remediation data and merges it into the accumulator.
- * @param {object} issue - issue object containing remediation and CVE data
- * @param {object} dep - dependency object containing the ref PURL
+ * @param {import('@trustify-da/trustify-da-api-model/model/v5/Issue.js').Issue} issue - issue object containing remediation and CVE data
+ * @param {import('@trustify-da/trustify-da-api-model/model/v5/DependencyReport.js').DependencyReport} dep - dependency object containing the ref PURL
  * @param {string} providerName
  * @param {string} sourceName
  * @param {number} providerRank
- * @param {Map<string, object>} remediationsByDep
+ * @param {Map<string, Remediation & { _fromTrustedContent?: boolean }>} remediationsByDep
  * @param {Map<string, number>} rankByDep
- * @param {object} strategy - version selection strategy
+ * @param {VersionStrategy} strategy - version selection strategy
  */
 function processIssueRemediation(issue, dep, providerName, sourceName, providerRank, remediationsByDep, rankByDep, strategy) {
 	const depPurl = dep.ref
@@ -204,7 +209,7 @@ function processIssueRemediation(issue, dep, providerName, sourceName, providerR
 		return
 	}
 
-	const cveId = issue.id || issue.cve
+	const cveId = issue.id
 	const severity = issue.severity || 'UNKNOWN'
 	const advisories = extractAdvisories(issue)
 
@@ -264,10 +269,10 @@ function processIssueRemediation(issue, dep, providerName, sourceName, providerR
 /**
  * Extracts remediations from the recommendations section of a provider report.
  * Merges CVEs and advisories into existing entries when present.
- * @param {object} providerReport
+ * @param {import('@trustify-da/trustify-da-api-model/model/v5/ProviderReport.js').ProviderReport} providerReport
  * @param {string} providerName
  * @param {number} providerRank
- * @param {Map<string, object>} remediationsByDep
+ * @param {Map<string, Remediation & { _fromTrustedContent?: boolean }>} remediationsByDep
  * @param {Map<string, number>} rankByDep
  */
 function extractFromRecommendations(providerReport, providerName, providerRank, remediationsByDep, rankByDep) {
@@ -343,9 +348,9 @@ function extractFromRecommendations(providerReport, providerName, providerRank, 
  * Gets the fixedIn PURL from an issue's remediation, preferring trustedContent.
  * When fixedIn is an array of version strings (not PURLs), uses the strategy's
  * selectVersion to pick the best candidate and constructs a PURL from the dependency ref.
- * @param {object} issue
+ * @param {import('@trustify-da/trustify-da-api-model/model/v5/Issue.js').Issue} issue
  * @param {string} depPurl - the dependency PURL, used to construct fixedIn PURLs from version strings
- * @param {object} strategy - version selection strategy
+ * @param {VersionStrategy} strategy - version selection strategy
  * @param {string} currentVersion - the dependency's current version
  * @returns {string|undefined}
  */
@@ -353,17 +358,11 @@ function getFixedInPurl(issue, depPurl, strategy, currentVersion) {
 	if (!issue.remediation) {
 		return undefined
 	}
-	if (issue.remediation.trustedContent && issue.remediation.trustedContent.ref) {
+	if (issue.remediation.trustedContent?.ref) {
 		return issue.remediation.trustedContent.ref
 	}
 	const fixedIn = issue.remediation.fixedIn
-	if (!fixedIn) {
-		return undefined
-	}
-	if (typeof fixedIn === 'string') {
-		return fixedIn
-	}
-	if (Array.isArray(fixedIn) && fixedIn.length > 0) {
+	if (fixedIn?.length > 0) {
 		const version = fixedIn.length > 1
 			? strategy.selectVersion(fixedIn, currentVersion)
 			: fixedIn[0]
@@ -385,25 +384,16 @@ function getFixedInPurl(issue, depPurl, strategy, currentVersion) {
 
 /**
  * Extracts advisory objects from an issue.
- * @param {object} issue
+ * @param {import('@trustify-da/trustify-da-api-model/model/v5/Issue.js').Issue} issue
  * @returns {Array<{id: string, url: string}>}
  */
 function extractAdvisories(issue) {
 	const advisories = []
-	if (issue.remediation && issue.remediation.trustedContent) {
-		const tc = issue.remediation.trustedContent
-		if (tc.advisory) {
+	for (const advisory of issue.remediation?.advisories ?? []) {
+		if (advisory.advisory?.id) {
 			advisories.push({
-				id: tc.advisory.id || tc.advisory,
-				url: tc.advisory.url || '',
-			})
-		}
-	}
-	if (issue.advisories) {
-		for (const adv of issue.advisories) {
-			advisories.push({
-				id: adv.id || adv,
-				url: adv.url || '',
+				id: advisory.advisory.id,
+				url: advisory.advisory.url || '',
 			})
 		}
 	}

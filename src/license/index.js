@@ -2,9 +2,9 @@
  * License resolution and dependency license compatibility for component analysis.
  */
 
-import { getProjectLicense, findLicenseFilePath, identifyLicense } from './project_license.js';
-import { licensesFromReport, getLicenseDetails } from './licenses_api.js';
 import { getCompatibility } from './license_utils.js';
+import { licensesFromReport, getLicenseDetails } from './licenses_api.js';
+import { getProjectLicense, findLicenseFilePath, identifyLicense } from './project_license.js';
 
 export { getProjectLicense, findLicenseFilePath, identifyLicense } from './project_license.js';
 export { licensesFromReport, normalizeLicensesResponse, getLicenseDetails } from './licenses_api.js';
@@ -18,7 +18,7 @@ export { getCompatibility } from './license_utils.js';
  * @param {string} manifestPath - path to manifest
  * @param {string} url - the backend url to send the request to
  * @param {import('../index.js').Options} [opts={}]
- * @param {import('@trustify-da/trustify-da-api-model/model/v5/AnalysisReport').AnalysisReport} [analysisResult] - analysis result that includes licenses array from backend
+ * @param {import('@trustify-da/trustify-da-api-model/model/v5/AnalysisReport.ts').AnalysisReport} [analysisResult] - analysis result that includes licenses array from backend
  * @returns {Promise<{ projectLicense: { manifest: Object|null, file: Object|null, mismatch: boolean }, incompatibleDependencies: Array<{ purl: string, licenses: string[], category?: string, reason: string }>, error?: string }>}
  */
 export async function runLicenseCheck(sbomContent, manifestPath, url, opts = {}, analysisResult = null) {
@@ -45,8 +45,8 @@ export async function runLicenseCheck(sbomContent, manifestPath, url, opts = {},
 	const licenseDetailsCache = new Map();
 
 	async function getDetails(spdxId) {
-		if (!spdxId || !url) return null;
-		if (licenseDetailsCache.has(spdxId)) return licenseDetailsCache.get(spdxId);
+		if (!spdxId || !url) { return null; }
+		if (licenseDetailsCache.has(spdxId)) { return licenseDetailsCache.get(spdxId); }
 
 		try {
 			const details = await getLicenseDetails(spdxId, { ...opts, TRUSTIFY_DA_BACKEND_URL: url });
@@ -91,7 +91,7 @@ export async function runLicenseCheck(sbomContent, manifestPath, url, opts = {},
 
 	for (const purl of purls) {
 		const entry = licenseByPurl.get(purl);
-		if (!entry) continue;
+		if (!entry) { continue; }
 
 		const status = getCompatibility(projectCategory, entry.category);
 		if (status === 'incompatible') {

@@ -12,13 +12,33 @@ export const CYCLONEDX_JSON_MEDIA_TYPE = 'application/vnd.cyclonedx+json'
 export default { requestComponent, requestStack, requestStackBatch, requestImages, validateToken, appendAnalysisQueryParams }
 
 /**
+ * @overload
+ * @param {import('./provider').Provider} provider
+ * @param {string} manifest
+ * @param {string} url
+ * @param {true} [html]
+ * @param {import("index.js").Options} [opts={}]
+ * @returns {Promise<string>}
+ */
+
+/**
+ * @overload
+ * @param {import('./provider').Provider} provider
+ * @param {string} manifest
+ * @param {string} url
+ * @param {false} [html]
+ * @param {import("index.js").Options} [opts={}]
+ * @returns {Promise<import('@trustify-da/trustify-da-api-model/model/v5/AnalysisReport.ts').AnalysisReport>>}
+ */
+
+/**
  * Send a stack analysis request and get the report as 'text/html' or 'application/json'.
  * @param {import('./provider').Provider} provider - the provided data for constructing the request
  * @param {string} manifest - path for the manifest
  * @param {string} url - the backend url to send the request to
  * @param {boolean} [html=false] - true will return 'text/html', false will return 'application/json'
  * @param {import("index.js").Options} [opts={}] - optional various options to pass along the application
- * @returns {Promise<string|import('@trustify-da/trustify-da-api-model/model/v5/AnalysisReport').AnalysisReport>}
+ * @returns {Promise<string|import('@trustify-da/trustify-da-api-model/model/v5/AnalysisReport.ts').AnalysisReport>}
  */
 async function requestStack(provider, manifest, url, html = false, opts = {}) {
 	opts["source-manifest"] = Buffer.from(fs.readFileSync(manifest).toString()).toString('base64')
@@ -83,7 +103,7 @@ async function requestStack(provider, manifest, url, html = false, opts = {}) {
  * @param {string} manifest - path for the manifest
  * @param {string} url - the backend url to send the request to
  * @param {import("index.js").Options} [opts={}] - optional various options to pass along the application
- * @returns {Promise<import('@trustify-da/trustify-da-api-model/model/v5/AnalysisReport').AnalysisReport>}
+ * @returns {Promise<import('@trustify-da/trustify-da-api-model/model/v5/AnalysisReport.ts').AnalysisReport>}
  */
 async function requestComponent(provider, manifest, url, opts = {}) {
 	opts["source-manifest"] = Buffer.from(fs.readFileSync(manifest).toString()).toString('base64')
@@ -143,12 +163,30 @@ async function requestComponent(provider, manifest, url, opts = {}) {
 }
 
 /**
+ * @overload
+ * @param {Object.<string, object>} sbomByPurl
+ * @param {string} url
+ * @param {true} [html=false]
+ * @param {import("index.js").Options} [opts={}]
+ * @returns {Promise<string>}
+ */
+
+/**
+ * @overload
+ * @param {Object.<string, object>} sbomByPurl
+ * @param {string} url
+ * @param {false} [html=false]
+ * @param {import("index.js").Options} [opts={}]
+ * @returns {Promise<Object.<string, import('@trustify-da/trustify-da-api-model/model/v5/AnalysisReport.ts').AnalysisReport>>}
+ */
+
+/**
  * Send a batch stack analysis request for multiple manifests (SBOMs keyed by purl).
  * @param {Object.<string, object>} sbomByPurl - Map of root purl to CycloneDX SBOM object
  * @param {string} url - the backend url
  * @param {boolean} [html=false] - true returns HTML, false returns JSON
  * @param {import("index.js").Options} [opts={}]
- * @returns {Promise<string|Object.<string, import('@trustify-da/trustify-da-api-model/model/v5/AnalysisReport').AnalysisReport>>}
+ * @returns {Promise<string|Object.<string, import('@trustify-da/trustify-da-api-model/model/v5/AnalysisReport.ts').AnalysisReport>>}
  */
 async function requestStackBatch(sbomByPurl, url, html = false, opts = {}) {
 	const finalUrl = new URL(`${url}/api/v5/batch-analysis`)
@@ -193,7 +231,7 @@ async function requestStackBatch(sbomByPurl, url, html = false, opts = {}) {
  * @param {Array<string>} imageRefs
  * @param {string} url
  * @param {import("index.js").Options} [opts={}] - optional various options to pass along the application
- * @returns {Promise<string|Object.<string, import('@trustify-da/trustify-da-api-model/model/v5/AnalysisReport').AnalysisReport>>}
+ * @returns {Promise<string|Object.<string, import('@trustify-da/trustify-da-api-model/model/v5/AnalysisReport.ts').AnalysisReport>>}
  */
 async function requestImages(imageRefs, url, html = false, opts = {}) {
 	const imageSboms = {}

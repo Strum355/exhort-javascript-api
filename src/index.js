@@ -165,7 +165,7 @@ export function selectTrustifyDABackend(opts = {}) {
  * @param {string} manifest
  * @param {false} html
  * @param {Options} [opts={}]
- * @returns {Promise<import('@trustify-da/trustify-da-api-model/model/v5/AnalysisReport').AnalysisReport>}
+ * @returns {Promise<import('@trustify-da/trustify-da-api-model/model/v5/AnalysisReport.ts').AnalysisReport>}
  * @throws {Error}
  */
 
@@ -175,7 +175,7 @@ export function selectTrustifyDABackend(opts = {}) {
  * @param {string} manifest - path for the manifest
  * @param {boolean} [html=false] - true will return a html string, false will return AnalysisReport object.
  * @param {Options} [opts={}] - optional various options to pass along the application
- * @returns {Promise<string|import('@trustify-da/trustify-da-api-model/model/v5/AnalysisReport').AnalysisReport>}
+ * @returns {Promise<string|import('@trustify-da/trustify-da-api-model/model/v5/AnalysisReport.ts').AnalysisReport>}
  * @throws {Error} if manifest inaccessible, no matching provider, failed to get create content,
  * 		or backend request failed
  */
@@ -190,7 +190,7 @@ async function stackAnalysis(manifest, html = false, opts = {}) {
  * Get component analysis report for a manifest content.
  * @param {string} manifest - path to the manifest
  * @param {Options} [opts={}] - optional various options to pass along the application
- * @returns {Promise<import('@trustify-da/trustify-da-api-model/model/v5/AnalysisReport').AnalysisReport>}
+ * @returns {Promise<import('@trustify-da/trustify-da-api-model/model/v5/AnalysisReport.ts').AnalysisReport>}
  * @throws {Error} if no matching provider, failed to get create content, or backend request failed
  */
 async function componentAnalysis(manifest, opts = {}) {
@@ -217,7 +217,7 @@ async function componentAnalysis(manifest, opts = {}) {
  * @param {Array<string>} imageRefs
  * @param {false} html
  * @param {Options} [opts={}]
- * @returns {Promise<Object.<string, import('@trustify-da/trustify-da-api-model/model/v5/AnalysisReport').AnalysisReport>>}
+ * @returns {Promise<Object.<string, import('@trustify-da/trustify-da-api-model/model/v5/AnalysisReport.ts').AnalysisReport>>}
  * @throws {Error}
  */
 
@@ -227,7 +227,7 @@ async function componentAnalysis(manifest, opts = {}) {
  * @param {Array<string>} imageRefs - OCI image references
  * @param {boolean} [html=false] - true will return a html string, false will return AnalysisReport
  * @param {Options} [opts={}] - optional various options to pass along the application
- * @returns {Promise<string|Object.<string, import('@trustify-da/trustify-da-api-model/model/v5/AnalysisReport').AnalysisReport>>}
+ * @returns {Promise<string|Object.<string, import('@trustify-da/trustify-da-api-model/model/v5/AnalysisReport.ts').AnalysisReport>>}
  * @throws {Error} if manifest inaccessible, no matching provider, failed to get create content,
  * 		or backend request failed
  */
@@ -500,7 +500,7 @@ function batchError(message, wantMetadata, metadata) {
  * @param {string} workspaceRoot
  * @param {false} html
  * @param {Options & { batchMetadata: true }} opts
- * @returns {Promise<{ analysis: Object.<string, import('@trustify-da/trustify-da-api-model/model/v5/AnalysisReport').AnalysisReport>, metadata: BatchAnalysisMetadata }>}
+ * @returns {Promise<{ analysis: Object.<string, import('@trustify-da/trustify-da-api-model/model/v5/AnalysisReport.ts').AnalysisReport>, metadata: BatchAnalysisMetadata }>}
  * @throws {Error}
  */
 
@@ -509,7 +509,7 @@ function batchError(message, wantMetadata, metadata) {
  * @param {string} workspaceRoot
  * @param {false} html
  * @param {Options & { batchMetadata?: false }} [opts={}]
- * @returns {Promise<Object.<string, import('@trustify-da/trustify-da-api-model/model/v5/AnalysisReport').AnalysisReport>>}
+ * @returns {Promise<Object.<string, import('@trustify-da/trustify-da-api-model/model/v5/AnalysisReport.ts').AnalysisReport>>}
  * @throws {Error}
  */
 
@@ -523,7 +523,7 @@ function batchError(message, wantMetadata, metadata) {
  * @param {string} workspaceRoot - Path to workspace root (containing lock file and workspace config)
  * @param {boolean} [html=false] - true returns HTML, false returns JSON report
  * @param {Options} [opts={}] - `batchConcurrency`, discovery ignores, `continueOnError` (default true), `batchMetadata` (default false)
- * @returns {Promise<string|Object.<string, import('@trustify-da/trustify-da-api-model/model/v5/AnalysisReport').AnalysisReport>|{ analysis: string|Object.<string, import('@trustify-da/trustify-da-api-model/model/v5/AnalysisReport').AnalysisReport>, metadata: BatchAnalysisMetadata }>}
+ * @returns {Promise<string|Object.<string, import('@trustify-da/trustify-da-api-model/model/v5/AnalysisReport.ts').AnalysisReport>|{ analysis: string|Object.<string, import('@trustify-da/trustify-da-api-model/model/v5/AnalysisReport.ts').AnalysisReport>, metadata: BatchAnalysisMetadata }>}
  * @throws {Error} if workspace root invalid, no manifests found, no packages pass validation, no SBOMs produced, or backend request failed. When `opts.batchMetadata` is set, `error.batchMetadata` may be set on thrown errors.
  */
 async function stackAnalysisBatch(workspaceRoot, html = false, opts = {}) {

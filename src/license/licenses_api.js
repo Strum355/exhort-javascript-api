@@ -87,7 +87,7 @@ export function normalizeLicensesResponse(data, purls = []) {
  * Build license map from an analysis report that already includes license data (result.licenses).
  * Use this when the dependency analysis response already contains the licenses array to avoid a second request.
  *
- * @param {import('@trustify-da/trustify-da-api-model/model/v5/AnalysisReport').AnalysisReport} analysisReport - full analysis JSON
+ * @param {import('@trustify-da/trustify-da-api-model/model/v5/AnalysisReport.ts').AnalysisReport} analysisReport - full analysis JSON
  * @param {string[]} [purls] - optional list of purls to restrict to
  * @returns {Map<string, { licenses: string[], category?: string }>}
  */
