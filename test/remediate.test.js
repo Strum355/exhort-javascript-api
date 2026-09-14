@@ -14,7 +14,7 @@ import { stub } from 'sinon'
 function buildAnalysisReport(overrides = {}) {
 	const {
 		depRef = 'pkg:maven/org.apache.commons/commons-text@1.9',
-		fixedIn = 'pkg:maven/org.apache.commons/commons-text@1.10.0',
+		fixedIn = ['pkg:maven/org.apache.commons/commons-text@1.10.0'],
 		issueId = 'CVE-2022-42889',
 		severity = 'CRITICAL',
 		providerName = 'redhat',
@@ -170,7 +170,7 @@ suite('remediate — runRemediation', () => {
 				// A vulnerable dep that is NOT declared in SAMPLE_POM — the updater applies nothing.
 				requestStackStub.resolves(buildAnalysisReport({
 					depRef: 'pkg:maven/com.transitive/deep-lib@1.0',
-					fixedIn: 'pkg:maven/com.transitive/deep-lib@1.1',
+					fixedIn: ['pkg:maven/com.transitive/deep-lib@1.1'],
 				}))
 
 				const before = fs.readFileSync(pomPath, 'utf-8')
@@ -202,7 +202,7 @@ suite('remediate — runRemediation', () => {
 				// so extractRemediations returns empty (currentVersion matches fixedInVersion)
 				requestStackStub.resolves(buildAnalysisReport({
 					depRef: 'pkg:maven/org.apache.commons/commons-text@1.10.0',
-					fixedIn: 'pkg:maven/org.apache.commons/commons-text@1.10.0',
+					fixedIn: ['pkg:maven/org.apache.commons/commons-text@1.10.0'],
 				}))
 
 				await runRemediation(pomPath, {})
@@ -226,7 +226,7 @@ suite('remediate — runRemediation', () => {
 				matchStub.returns({ provideStack: stub().resolves({ content: '{}', contentType: 'application/json', ecosystem: 'gradle' }) })
 				requestStackStub.resolves(buildAnalysisReport({
 					depRef: 'pkg:maven/com.fasterxml.jackson.core/jackson-core@2.14.0',
-					fixedIn: 'pkg:maven/com.fasterxml.jackson.core/jackson-core@2.15.0',
+					fixedIn: ['pkg:maven/com.fasterxml.jackson.core/jackson-core@2.15.0'],
 				}))
 
 				// When running in apply mode (default)
@@ -257,7 +257,7 @@ suite('remediate — runRemediation', () => {
 				requestStackStub.onFirstCall().resolves(buildAnalysisReport())
 				requestStackStub.onSecondCall().resolves(buildAnalysisReport({
 					depRef: 'pkg:maven/com.fasterxml.jackson.core/jackson-core@2.14.0',
-					fixedIn: 'pkg:maven/com.fasterxml.jackson.core/jackson-core@2.15.0',
+					fixedIn: ['pkg:maven/com.fasterxml.jackson.core/jackson-core@2.15.0'],
 				}))
 
 				// When running in apply mode (default) on the directory
@@ -430,7 +430,7 @@ suite('remediate — runRemediation', () => {
 
 		/**
 		 * Builds an AnalysisReport containing several dependencies under one provider/source.
-		 * @param {Array<{depRef: string, fixedIn: string, issueId: string, severity?: string}>} deps
+		 * @param {Array<{depRef: string, fixedIn: string[], issueId: string, severity?: string}>} deps
 		 * @returns {object}
 		 */
 		function buildMultiDepReport(deps) {
@@ -461,8 +461,8 @@ suite('remediate — runRemediation', () => {
 				const pomPath = path.join(dir, 'pom.xml')
 				matchStub.returns({ provideStack: stub().resolves({ content: '{}', contentType: 'application/json', ecosystem: 'maven' }) })
 				requestStackStub.resolves(buildMultiDepReport([
-					{ depRef: 'pkg:maven/org.apache.commons/commons-text@1.9', fixedIn: 'pkg:maven/org.apache.commons/commons-text@1.10.0', issueId: 'CVE-2022-42889' },
-					{ depRef: 'pkg:maven/com.fasterxml.jackson.core/jackson-core@2.14.0', fixedIn: 'pkg:maven/com.fasterxml.jackson.core/jackson-core@2.15.0', issueId: 'CVE-2020-1000' },
+					{ depRef: 'pkg:maven/org.apache.commons/commons-text@1.9', fixedIn: ['pkg:maven/org.apache.commons/commons-text@1.10.0'], issueId: 'CVE-2022-42889' },
+					{ depRef: 'pkg:maven/com.fasterxml.jackson.core/jackson-core@2.14.0', fixedIn: ['pkg:maven/com.fasterxml.jackson.core/jackson-core@2.15.0'], issueId: 'CVE-2020-1000' },
 				]))
 
 				const result = await runRemediation(pomPath, { dryRun: true, perDependencyChanges: true })
@@ -497,8 +497,8 @@ suite('remediate — runRemediation', () => {
 				const pomPath = path.join(dir, 'pom.xml')
 				matchStub.returns({ provideStack: stub().resolves({ content: '{}', contentType: 'application/json', ecosystem: 'maven' }) })
 				requestStackStub.resolves(buildMultiDepReport([
-					{ depRef: 'pkg:maven/org.apache.commons/commons-text@1.9', fixedIn: 'pkg:maven/org.apache.commons/commons-text@1.10.0', issueId: 'CVE-2022-42889' },
-					{ depRef: 'pkg:maven/org.apache.commons/commons-lang3@1.9', fixedIn: 'pkg:maven/org.apache.commons/commons-lang3@1.10.0', issueId: 'CVE-2021-2000' },
+					{ depRef: 'pkg:maven/org.apache.commons/commons-text@1.9', fixedIn: ['pkg:maven/org.apache.commons/commons-text@1.10.0'], issueId: 'CVE-2022-42889' },
+					{ depRef: 'pkg:maven/org.apache.commons/commons-lang3@1.9', fixedIn: ['pkg:maven/org.apache.commons/commons-lang3@1.10.0'], issueId: 'CVE-2021-2000' },
 				]))
 
 				const result = await runRemediation(pomPath, { dryRun: true, perDependencyChanges: true })
@@ -548,8 +548,8 @@ suite('remediate — runRemediation', () => {
 				// commons-text is declared directly (fixable); deep-lib is a transitive dep
 				// surfaced by analysis but not present in pom.xml (unfixable in this manifest).
 				requestStackStub.resolves(buildMultiDepReport([
-					{ depRef: 'pkg:maven/org.apache.commons/commons-text@1.9', fixedIn: 'pkg:maven/org.apache.commons/commons-text@1.10.0', issueId: 'CVE-2022-42889' },
-					{ depRef: 'pkg:maven/com.transitive/deep-lib@1.0', fixedIn: 'pkg:maven/com.transitive/deep-lib@1.1', issueId: 'CVE-2023-9999' },
+					{ depRef: 'pkg:maven/org.apache.commons/commons-text@1.9', fixedIn: ['pkg:maven/org.apache.commons/commons-text@1.10.0'], issueId: 'CVE-2022-42889' },
+					{ depRef: 'pkg:maven/com.transitive/deep-lib@1.0', fixedIn: ['pkg:maven/com.transitive/deep-lib@1.1'], issueId: 'CVE-2023-9999' },
 				]))
 
 				const result = await runRemediation(pomPath, { dryRun: true, perDependencyChanges: true })
