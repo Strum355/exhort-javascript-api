@@ -14,7 +14,7 @@ function buildReport(overrides = {}) {
 		depRef = 'pkg:maven/org.apache.commons/commons-text@1.9',
 		issueId = 'CVE-2022-42889',
 		severity = 'CRITICAL',
-		fixedIn = 'pkg:maven/org.apache.commons/commons-text@1.10.0',
+		fixedIn = ['pkg:maven/org.apache.commons/commons-text@1.10.0'],
 		trustedContentRef = undefined,
 		advisory = undefined,
 		recommendations = undefined,
@@ -29,9 +29,9 @@ function buildReport(overrides = {}) {
 	}
 	if (trustedContentRef) {
 		remediation.trustedContent = { ref: trustedContentRef }
-		if (advisory) {
-			remediation.trustedContent.advisory = advisory
-		}
+	}
+	if (advisory) {
+		remediation.advisories = [{ advisory: { id: advisory.id, url: advisory.url } }]
 	}
 
 	const issue = {
@@ -96,7 +96,7 @@ suite('remediation extractor', () => {
 			// Given a report with two providers for the same dependency
 			const report = buildReport({
 				providerName: 'provider-low',
-				fixedIn: 'pkg:maven/org.apache.commons/commons-text@1.10.0?type=jar',
+				fixedIn: ['pkg:maven/org.apache.commons/commons-text@1.10.0?type=jar'],
 				extraProviders: {
 					'provider-high': {
 						sources: {
@@ -135,7 +135,7 @@ suite('remediation extractor', () => {
 			// Given a report with a listed and an unlisted provider
 			const report = buildReport({
 				providerName: 'unlisted-provider',
-				fixedIn: 'pkg:maven/org.apache.commons/commons-text@1.10.0?type=jar',
+				fixedIn: ['pkg:maven/org.apache.commons/commons-text@1.10.0?type=jar'],
 				extraProviders: {
 					'listed-provider': {
 						sources: {
@@ -146,7 +146,7 @@ suite('remediation extractor', () => {
 										id: 'CVE-2022-42889',
 										severity: 'CRITICAL',
 										remediation: {
-											fixedIn: 'pkg:maven/org.apache.commons/commons-text@1.9.1?type=jar',
+											fixedIn: ['pkg:maven/org.apache.commons/commons-text@1.9.1?type=jar'],
 										},
 									}],
 								}],
@@ -172,7 +172,7 @@ suite('remediation extractor', () => {
 			// Given two providers with different fix versions and no priority config
 			const report = buildReport({
 				providerName: 'provider-a',
-				fixedIn: 'pkg:maven/org.apache.commons/commons-text@1.10.0',
+				fixedIn: ['pkg:maven/org.apache.commons/commons-text@1.10.0'],
 				extraProviders: {
 					'provider-b': {
 						sources: {
@@ -183,7 +183,7 @@ suite('remediation extractor', () => {
 										id: 'CVE-2022-42889',
 										severity: 'CRITICAL',
 										remediation: {
-											fixedIn: 'pkg:maven/org.apache.commons/commons-text@1.11.0',
+											fixedIn: ['pkg:maven/org.apache.commons/commons-text@1.11.0'],
 										},
 									}],
 								}],
@@ -207,12 +207,12 @@ suite('remediation extractor', () => {
 		test('multiple CVEs on same dependency produce single entry with highest version', () => {
 			// Given a dependency with two CVEs having different fix versions from the same provider
 			const report = buildReport({
-				fixedIn: 'pkg:maven/org.apache.commons/commons-text@1.10.0',
+				fixedIn: ['pkg:maven/org.apache.commons/commons-text@1.10.0'],
 				extraIssues: [{
 					id: 'CVE-2023-99999',
 					severity: 'HIGH',
 					remediation: {
-						fixedIn: 'pkg:maven/org.apache.commons/commons-text@1.11.0',
+						fixedIn: ['pkg:maven/org.apache.commons/commons-text@1.11.0'],
 					},
 				}],
 			})
@@ -233,12 +233,12 @@ suite('remediation extractor', () => {
 			// Given two CVEs with different severities
 			const report = buildReport({
 				severity: 'MEDIUM',
-				fixedIn: 'pkg:maven/org.apache.commons/commons-text@1.10.0',
+				fixedIn: ['pkg:maven/org.apache.commons/commons-text@1.10.0'],
 				extraIssues: [{
 					id: 'CVE-2023-99999',
 					severity: 'CRITICAL',
 					remediation: {
-						fixedIn: 'pkg:maven/org.apache.commons/commons-text@1.10.0',
+						fixedIn: ['pkg:maven/org.apache.commons/commons-text@1.10.0'],
 					},
 				}],
 			})
@@ -370,7 +370,7 @@ suite('remediation extractor', () => {
 			// Given a report where source has a fix and recommendation also exists
 			const report = buildReport({
 				depRef: 'pkg:maven/com.example/lib@1.0.0',
-				fixedIn: 'pkg:maven/com.example/lib@1.1.0',
+				fixedIn: ['pkg:maven/com.example/lib@1.1.0'],
 				recommendations: {
 					dependencies: [{
 						ref: 'pkg:maven/com.example/lib@1.0.0',
