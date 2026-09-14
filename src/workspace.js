@@ -14,7 +14,8 @@ const DEFAULT_WORKSPACE_DISCOVERY_IGNORE = [
 ]
 
 /**
- * Resolve ignore globs for workspace discovery: defaults + `TRUSTIFY_DA_WORKSPACE_DISCOVERY_IGNORE` + `opts.workspaceDiscoveryIgnore`.
+ * Resolve ignore globs for workspace discovery. Unlike scalar options, ignore patterns are additive:
+ * defaults + `opts.TRUSTIFY_DA_WORKSPACE_DISCOVERY_IGNORE`/environment + `opts.workspaceDiscoveryIgnore`.
  * Patterns are fast-glob / micromatch style, relative to the workspace root (forward slashes).
  *
  * @param {{ workspaceDiscoveryIgnore?: string[], TRUSTIFY_DA_WORKSPACE_DISCOVERY_IGNORE?: string, [key: string]: unknown }} [opts={}]
@@ -269,4 +270,3 @@ export async function discoverWorkspaceCrates(workspaceRoot, opts = {}) {
 	const ignorePatterns = resolveWorkspaceDiscoveryIgnore(opts)
 	return filterManifestPathsByDiscoveryIgnore(manifestPaths, root, ignorePatterns)
 }
-

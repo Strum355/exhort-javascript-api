@@ -6,11 +6,51 @@ import * as path from "path";
 import yargs from 'yargs'
 import { hideBin } from 'yargs/helpers'
 
+import { resolveConfig } from './config.js'
 import { getProjectLicense, getLicenseDetails } from './license/index.js'
 import { runRemediation } from './remediate.js'
 import { generateReport } from './remediation_report.js'
 
 import client, { selectTrustifyDABackend, generateSbom } from './index.js'
+
+/**
+ * Builds a yargs middleware that loads `.trustify-da.yml` (discovered by walking
+ * up from the command's target path, or cwd when no path is available) and fills `--providers`, `--sources`, and
+ * `--group-by` with config file values when they were not supplied on the CLI or
+ * via environment variables. Precedence: CLI flag > env var > config file > default.
+ * @param {string} [pathKey] - positional argument holding the target path; defaults to the current working directory
+ * @param {{ groupBy?: boolean }} [options={}] - set `groupBy` when the command exposes `--group-by`
+ * @returns {(args: object) => object} yargs middleware
+ */
+function configMiddleware(pathKey, options = {}) {
+	return args => {
+		const startPath = pathKey === undefined ? process.cwd() : args[pathKey]
+		const envVars = options.groupBy
+			? process.env
+			: Object.fromEntries(Object.entries(process.env).filter(([key]) => key !== 'TRUSTIFY_DA_GROUP_BY'))
+		const merged = resolveConfig(
+			startPath,
+			{ backendUrl: args.backendUrl, providers: args.providers, sources: args.sources, groupBy: args['group-by'] },
+			envVars
+		)
+		if (merged.backendUrlSource === 'file' && process.env.TRUSTIFY_DA_TOKEN) {
+			throw new Error('Refusing to send TRUSTIFY_DA_TOKEN to a backend selected by project configuration. Set --backend-url or TRUSTIFY_DA_BACKEND_URL to explicitly trust it.')
+		}
+		if (args.providers !== undefined || merged.providers.length) {
+			args.providers = merged.providers.join(',')
+		}
+		if (args.sources !== undefined || merged.sources.length) {
+			args.sources = merged.sources.join(',')
+		}
+		if (merged.backendUrl != null) {
+			args.backendUrl = merged.backendUrl
+		}
+		if (options.groupBy) {
+			args['group-by'] = merged.groupBy
+		}
+		return args
+	}
+}
 
 
 // command for component analysis take manifest type and content
@@ -31,6 +71,10 @@ const component = {
 			type: 'string',
 			normalize: true,
 		},
+		backendUrl: {
+			desc: 'Trustify DA backend URL (env: TRUSTIFY_DA_BACKEND_URL)',
+			type: 'string',
+		},
 		providers: {
 			desc: 'Comma-separated list of vulnerability providers (env: TRUSTIFY_DA_PROVIDERS)',
 			type: 'string',
@@ -39,14 +83,17 @@ const component = {
 			desc: 'Comma-separated list of vulnerability sources (env: TRUSTIFY_DA_SOURCES)',
 			type: 'string',
 		}
-	}),
+	}).middleware(configMiddleware('/path/to/manifest')),
 	handler: async args => {
 		let manifestName = args['/path/to/manifest']
 		const opts = args.workspaceDir ? { TRUSTIFY_DA_WORKSPACE_DIR: args.workspaceDir } : {}
-		if (args.providers) {
+		if (args.backendUrl !== undefined) {
+			opts.TRUSTIFY_DA_BACKEND_URL = args.backendUrl
+		}
+		if (args.providers !== undefined) {
 			opts.TRUSTIFY_DA_PROVIDERS = args.providers
 		}
-		if (args.sources) {
+		if (args.sources !== undefined) {
 			opts.TRUSTIFY_DA_SOURCES = args.sources
 		}
 		let res = await client.componentAnalysis(manifestName, opts)
@@ -105,6 +152,10 @@ const image = {
 			type: 'boolean',
 			conflicts: 'html'
 		},
+		backendUrl: {
+			desc: 'Trustify DA backend URL (env: TRUSTIFY_DA_BACKEND_URL)',
+			type: 'string',
+		},
 		providers: {
 			desc: 'Comma-separated list of vulnerability providers (env: TRUSTIFY_DA_PROVIDERS)',
 			type: 'string',
@@ -113,7 +164,7 @@ const image = {
 			desc: 'Comma-separated list of vulnerability sources (env: TRUSTIFY_DA_SOURCES)',
 			type: 'string',
 		}
-	}),
+	}).middleware(configMiddleware()),
 	handler: async args => {
 		let imageRefs = args['image-refs']
 		if (!Array.isArray(imageRefs)) {
@@ -122,10 +173,13 @@ const image = {
 		let html = args['html']
 		let summary = args['summary']
 		const opts = {}
-		if (args.providers) {
+		if (args.backendUrl !== undefined) {
+			opts.TRUSTIFY_DA_BACKEND_URL = args.backendUrl
+		}
+		if (args.providers !== undefined) {
 			opts.TRUSTIFY_DA_PROVIDERS = args.providers
 		}
-		if (args.sources) {
+		if (args.sources !== undefined) {
 			opts.TRUSTIFY_DA_SOURCES = args.sources
 		}
 		let res = await client.imageAnalysis(imageRefs, html, opts)
@@ -184,6 +238,10 @@ const stack = {
 			type: 'string',
 			normalize: true,
 		},
+		backendUrl: {
+			desc: 'Trustify DA backend URL (env: TRUSTIFY_DA_BACKEND_URL)',
+			type: 'string',
+		},
 		providers: {
 			desc: 'Comma-separated list of vulnerability providers (env: TRUSTIFY_DA_PROVIDERS)',
 			type: 'string',
@@ -192,16 +250,19 @@ const stack = {
 			desc: 'Comma-separated list of vulnerability sources (env: TRUSTIFY_DA_SOURCES)',
 			type: 'string',
 		}
-	}),
+	}).middleware(configMiddleware('/path/to/manifest')),
 	handler: async args => {
 		let manifest = args['/path/to/manifest']
 		let html = args['html']
 		let summary = args['summary']
 		const opts = args.workspaceDir ? { TRUSTIFY_DA_WORKSPACE_DIR: args.workspaceDir } : {}
-		if (args.providers) {
+		if (args.backendUrl !== undefined) {
+			opts.TRUSTIFY_DA_BACKEND_URL = args.backendUrl
+		}
+		if (args.providers !== undefined) {
 			opts.TRUSTIFY_DA_PROVIDERS = args.providers
 		}
-		if (args.sources) {
+		if (args.sources !== undefined) {
 			opts.TRUSTIFY_DA_SOURCES = args.sources
 		}
 		let theProvidersSummary = new Map();
@@ -276,6 +337,10 @@ const stackBatch = {
 			type: 'boolean',
 			default: false,
 		},
+		backendUrl: {
+			desc: 'Trustify DA backend URL (env: TRUSTIFY_DA_BACKEND_URL)',
+			type: 'string',
+		},
 		providers: {
 			desc: 'Comma-separated list of vulnerability providers (env: TRUSTIFY_DA_PROVIDERS)',
 			type: 'string',
@@ -284,12 +349,15 @@ const stackBatch = {
 			desc: 'Comma-separated list of vulnerability sources (env: TRUSTIFY_DA_SOURCES)',
 			type: 'string',
 		}
-	}),
+	}).middleware(configMiddleware('/path/to/workspace-root')),
 	handler: async args => {
 		const workspaceRoot = args['/path/to/workspace-root']
 		const html = args['html']
 		const summary = args['summary']
 		const opts = {}
+		if (args.backendUrl !== undefined) {
+			opts.TRUSTIFY_DA_BACKEND_URL = args.backendUrl
+		}
 		if (args.concurrency != null) {
 			opts.batchConcurrency = args.concurrency
 		}
@@ -303,10 +371,10 @@ const stackBatch = {
 		if (args.failFast) {
 			opts.continueOnError = false
 		}
-		if (args.providers) {
+		if (args.providers !== undefined) {
 			opts.TRUSTIFY_DA_PROVIDERS = args.providers
 		}
-		if (args.sources) {
+		if (args.sources !== undefined) {
 			opts.TRUSTIFY_DA_SOURCES = args.sources
 		}
 		let res = await client.stackAnalysisBatch(workspaceRoot, html, opts)
@@ -496,16 +564,20 @@ const remediate = {
 		'group-by': {
 			type: 'string',
 			choices: ['dependency', 'bundle'],
-			default: 'dependency',
-			desc: 'Report grouping strategy',
+			desc: 'Report grouping strategy (default: dependency)',
 		},
-	}),
+		backendUrl: {
+			desc: 'Trustify DA backend URL (env: TRUSTIFY_DA_BACKEND_URL)',
+			type: 'string',
+		},
+	}).middleware(configMiddleware('path', { groupBy: true })),
 	handler: async args => {
 		try {
 			const result = await runRemediation(args.path, {
 				dryRun: args['dry-run'],
 				providers: args.providers,
 				sources: args.sources,
+				backendUrl: args.backendUrl,
 			})
 
 			if (result.remediations.length === 0 && result.manifests.length === 0) {

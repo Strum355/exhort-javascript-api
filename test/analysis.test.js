@@ -76,6 +76,21 @@ suite('testing the analysis module for sending api requests', () => {
 				expect(res.dummy).to.equal('response')
 			}
 		))
+
+		test('licenseCheck option overrides the environment variable', interceptAndRun(
+			http.post(`${backendUrl}/api/v5/analysis`, () => HttpResponse.json({ dummy: 'response' })),
+			async () => {
+				process.env.TRUSTIFY_DA_LICENSE_CHECK = 'false'
+				try {
+					const res = await analysis.requestComponent(
+						fakeProvider, fakeManifest, backendUrl, { licenseCheck: true }
+					)
+					expect(res).to.have.property('licenseSummary')
+				} finally {
+					delete process.env.TRUSTIFY_DA_LICENSE_CHECK
+				}
+			}
+		))
 	})
 
 	suite('testing the requestStack function', () => {
@@ -262,6 +277,27 @@ suite('testing the analysis module for sending api requests', () => {
 				expect(url.searchParams.get('sources')).to.equal('osv')
 			} finally {
 				delete process.env['TRUSTIFY_DA_SOURCES']
+			}
+		})
+
+		test('opts override environment variables', () => {
+			process.env.TRUSTIFY_DA_PROVIDERS = 'env-provider'
+			process.env.TRUSTIFY_DA_SOURCES = 'env-source'
+			process.env.TRUSTIFY_DA_RECOMMEND = 'false'
+			try {
+				const url = new URL('http://example.com/api/v5/analysis')
+				analysis.appendAnalysisQueryParams(url, {
+					TRUSTIFY_DA_PROVIDERS: 'opts-provider',
+					TRUSTIFY_DA_SOURCES: 'opts-source',
+					TRUSTIFY_DA_RECOMMEND: 'true',
+				})
+				expect(url.searchParams.get('providers')).to.equal('opts-provider')
+				expect(url.searchParams.get('sources')).to.equal('opts-source')
+				expect(url.searchParams.has('recommend')).to.equal(false)
+			} finally {
+				delete process.env.TRUSTIFY_DA_PROVIDERS
+				delete process.env.TRUSTIFY_DA_SOURCES
+				delete process.env.TRUSTIFY_DA_RECOMMEND
 			}
 		})
 

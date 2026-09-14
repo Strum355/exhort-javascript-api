@@ -28,20 +28,19 @@ export function logValueFromObjects(key,opts, defValue) {
 }
 
 /**
- * Utility function will return the value for key from the environment variables,
- * if not present will return the value for key from the opts objects only if it's a string,
- * if not present, or not string will return the default value supplied which default to null.
+ * Utility function returns the value for key from opts, then environment variables,
+ * then the supplied default. Values from opts are used only if they are strings.
  * @param {string} key the key to look for in the environment variables and the opts object
  * @param {string|null} [def=null] the value to return if nothing else found
- * @param {{}} [opts={}] the options object to look for the key in if not found in environment
- * @returns {string|null} the value of the key found in the environment, options object, or the
+ * @param {{}} [opts={}] the options object to check before the environment
+ * @returns {string|null} the value of the key found in the options object, environment, or the
  * 		default supplied
  */
 export function getCustom(key, def = null, opts = {}) {
 	if (process.env["TRUSTIFY_DA_DEBUG"] === "true" && !key.match(RegexNotToBeLogged)) {
 		logValueFromObjects(key, opts, def)
 	}
-	return key in process.env ? process.env[key] : key in opts && typeof opts[key] === 'string' ? opts[key] : def
+	return key in opts && typeof opts[key] === 'string' ? opts[key] : key in process.env ? process.env[key] : def
 }
 
 /**
@@ -79,12 +78,11 @@ function validateExecutablePath(binPath) {
 
 /**
  * Utility function for looking up custom variable for a binary path.
- * Will look in the environment variables (1) or in opts (2) for a key with TRUSTIFY_DA_x_PATH, x is an
- * uppercase version of passed name to look for. The name will also be returned if nothing else was
- * found.
+ * Looks in opts, then environment variables, for a key with TRUSTIFY_DA_x_PATH, where x is an
+ * uppercase version of the supplied name. The name is returned if neither contains the key.
  * @param name the binary name to look for, will be returned as value in nothing else found
- * @param {{}} [opts={}] the options object to look for the key in if not found in environment
- * @returns {string|null} the value of the key found in the environment, options object, or the
+ * @param {{}} [opts={}] the options object to check before the environment
+ * @returns {string|null} the value of the key found in the options object, environment, or the
  * 		original name supplied
  */
 export function getCustomPath(name, opts = {}) {
@@ -96,7 +94,7 @@ export function getCustomPath(name, opts = {}) {
  * Utility function for determining whether wrappers for build tools such as gradlew/mvnw should be
  * preferred over invoking the binary directly.
  * @param {string} name - binary for which to search for its wrapper
- * @param {{}} opts - the options object to look for the key in if not found in environment
+ * @param {{}} opts - the options object to check before the environment
  * @returns {boolean} whether to prefer the wrapper if exists or not
  */
 export function getWrapperPreference(name, opts = {}) {

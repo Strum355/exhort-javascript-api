@@ -55,8 +55,11 @@ export TRUSTIFY_DA_LICENSE_CHECK=false
 
 **Programmatic option:**
 ```javascript
-await componentAnalysis(‘pom.xml’, { licenseCheck: false });
+await componentAnalysis('pom.xml', { licenseCheck: false });
 ```
+
+When both are supplied, the programmatic `licenseCheck` option takes precedence over
+`TRUSTIFY_DA_LICENSE_CHECK`.
 
 ## CLI Usage
 

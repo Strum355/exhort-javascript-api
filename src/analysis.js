@@ -127,7 +127,9 @@ async function requestComponent(provider, manifest, url, opts = {}) {
 
 
 		}
-		const licenseCheckEnabled = getCustom('TRUSTIFY_DA_LICENSE_CHECK', 'true', opts) !== 'false' && opts.licenseCheck !== false
+		const licenseCheckEnabled = typeof opts.licenseCheck === 'boolean'
+			? opts.licenseCheck
+			: getCustom('TRUSTIFY_DA_LICENSE_CHECK', 'true', opts) !== 'false'
 		if (licenseCheckEnabled) {
 			try {
 				result.licenseSummary = await runLicenseCheck(provided.content, manifest, url, opts, result)

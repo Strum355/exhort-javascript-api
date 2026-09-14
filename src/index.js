@@ -26,6 +26,7 @@ export { ImageRef } from "./oci_image/images.js";
 export { getProjectLicense, findLicenseFilePath, identifyLicense, getLicenseDetails, licensesFromReport, normalizeLicensesResponse, runLicenseCheck, getCompatibility } from "./license/index.js";
 export { extractRemediations } from "./remediation.js";
 export { generateReport, generateDeduplicationKey } from './remediation_report.js'
+export { loadConfig, mergeConfig, resolveConfig, CONFIG_FILENAMES } from './config.js'
 export { runRemediation, findManifests } from './remediate.js'
 
 export default { componentAnalysis, stackAnalysis, stackAnalysisBatch, imageAnalysis, validateToken, generateSbom }
@@ -74,6 +75,7 @@ export {
  * TRUSTIFY_DA_YARN_PATH?: string | undefined,
  * TRUSTIFY_DA_WORKSPACE_DIR?: string | undefined,
  * TRUSTIFY_DA_LICENSE_CHECK?: string | undefined,
+ * licenseCheck?: boolean | undefined,
  * MATCH_MANIFEST_VERSIONS?: string | undefined,
  * TRUSTIFY_DA_SOURCE?: string | undefined,
  * TRUSTIFY_DA_TOKEN?: string | undefined,
@@ -126,10 +128,8 @@ function readAndPrintVersionFromPackageJson() {
 }
 
 /**
- * This function is used to determine the Trustify DA backend URL.
- * The TRUSTIFY_DA_BACKEND_URL is evaluated in the following order and selected when it finds it first:
- * 1. Environment Variable
- * 2. (key,value) from opts object
+ * Selects the Trustify DA backend URL from opts.TRUSTIFY_DA_BACKEND_URL, then environment
+ * variable TRUSTIFY_DA_BACKEND_URL. Options take precedence over environment variables.
  * If TRUSTIFY_DA_BACKEND_URL is not set, the function will throw an error.
  * @param {{TRUSTIFY_DA_DEBUG?: string | undefined; TRUSTIFY_DA_BACKEND_URL?: string | undefined}} [opts={}]
  * @return {string} - The selected Trustify DA backend URL
@@ -237,7 +237,8 @@ async function imageAnalysis(imageRefs, html = false, opts = {}) {
 }
 
 /**
- * Max concurrent SBOM generations for batch workspace analysis. Env/opts override default 10.
+ * Max concurrent SBOM generations for batch workspace analysis. Options override environment;
+ * environment overrides the default of 10.
  * @param {Options} opts
  * @returns {number}
  * @private

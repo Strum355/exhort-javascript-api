@@ -7,7 +7,7 @@
 <h3>Usage</h3>
 <p>
 
-<strong>Prerequisites:</strong> The <code>TRUSTIFY_DA_BACKEND_URL</code> environment variable must be set to the URL of the Trustify Dependency Analytics backend service. You can set it as an environment variable or pass it in the options object (see <a href="#customization">Customization</a> section).
+<strong>Prerequisites:</strong> Supply the Trustify Dependency Analytics backend URL through <code>options.TRUSTIFY_DA_BACKEND_URL</code> or the <code>TRUSTIFY_DA_BACKEND_URL</code> environment variable (see <a href="#customization">Customization</a>). Programmatic options take precedence over environment variables.
 
 <ul>
 <li>
@@ -478,13 +478,13 @@ All of the above examples are valid for marking a package to be ignored
 
 <h3>Customization</h3>
 <p>
-There are 2 approaches for customizing <em>Trustify Dependency Analytics JavaScript Client</em>. Whether you're using this API as a
+There are two approaches for customizing <em>Trustify Dependency Analytics JavaScript Client</em>. Whether you're using this API as a
 <em>Global Module</em>, a <em>Remote Script</em>, or an <em>ESM Module</em>, you can use <em>Environment Variables</em>
-for various customization.
+for various customization. <em>ESM Module</em> users can also pass programmatic options.
 
-<strong>Note:</strong> The <code>TRUSTIFY_DA_BACKEND_URL</code> environment variable is <strong>mandatory</strong> and must be set to the URL of the Trustify Dependency Analytics backend service. Without this variable, the API will throw an error.
+<strong>Precedence:</strong> Programmatic options override environment variables, which override built-in defaults. A backend URL supplied through either <code>options.TRUSTIFY_DA_BACKEND_URL</code> or <code>TRUSTIFY_DA_BACKEND_URL</code> is mandatory.
 
-However, <em>ESM Module</em> users, can opt for customizing programmatically:
+Example programmatic customization:
 
 ```javascript
 import client from '@trustify-da/trustify-da-javascript-client'
@@ -527,7 +527,7 @@ let imageAnalysisHtml = await client.imageAnalysis(['docker.io/library/node:18']
 // Specify architecture using ^^ notation (e.g., httpd:2.4.49^^amd64)
 let imageAnalysisWithArch = await client.imageAnalysis(['httpd:2.4.49^^amd64'], false, options)
 ```
- **_Environment variables takes precedence._**
+ **_Programmatic options take precedence over environment variables._**
 </p>
 
 <h4>Monorepo / Workspace Support</h4>
@@ -563,12 +563,14 @@ const options = {
 }
 ```
 
+When both are supplied, <code>options.TRUSTIFY_DA_PROXY_URL</code> takes precedence over the environment variable.
+
 The proxy URL should be in the format: `http://host:port` or `https://host:port`. The API will automatically use the appropriate protocol (HTTP or HTTPS) based on the proxy URL provided.
 </p>
 
 <h4>License resolution and dependency license compliance</h4>
 <p>
-The client can resolve the <strong>project license</strong> from the manifest (e.g. <code>package.json</code> <code>license</code>, <code>pom.xml</code> <code>&lt;licenses&gt;</code>, <code>Cargo.toml</code> <code>license</code>) and from a <code>LICENSE</code> or <code>LICENSE.md</code> file in the project, and report when they differ. For <strong>component analysis</strong>, you can optionally run a license check: the client fetches dependency licenses from the backend (by purl) and reports dependencies whose licenses are incompatible with the project license. See <a href="docs/license-resolution-and-compliance.md">License resolution and compliance</a> for design and behavior. To disable the check on component analysis, set <code>TRUSTIFY_DA_LICENSE_CHECK=false</code> or pass <code>licenseCheck: false</code> in the options.
+The client can resolve the <strong>project license</strong> from the manifest (e.g. <code>package.json</code> <code>license</code>, <code>pom.xml</code> <code>&lt;licenses&gt;</code>, <code>Cargo.toml</code> <code>license</code>) and from a <code>LICENSE</code> or <code>LICENSE.md</code> file in the project, and report when they differ. For <strong>component analysis</strong>, you can optionally run a license check: the client fetches dependency licenses from the backend (by purl) and reports dependencies whose licenses are incompatible with the project license. See <a href="docs/license-resolution-and-compliance.md">License resolution and compliance</a> for design and behavior. To disable the check on component analysis, set <code>TRUSTIFY_DA_LICENSE_CHECK=false</code> or pass <code>licenseCheck: false</code> in the options. An explicit <code>licenseCheck</code> option takes precedence over the environment variable.
 </p>
 
 <h4>Customizing Executables</h4>
@@ -676,7 +678,7 @@ can cause a confusion for the user in the client consuming the API and leads to 
 
 ##### Usage
 
-To eliminate confusion and improve clarity as discussed above, the following setting was introduced - `MATCH_MANIFEST_VERSIONS`, in the form of environment variable/key in opts ( as usual , environment variable takes precedence )
+To eliminate confusion and improve clarity as discussed above, the following setting was introduced - `MATCH_MANIFEST_VERSIONS`, in the form of an environment variable or key in opts. When both are supplied, the value in opts takes precedence.
 for two ecosystems:
  - Golang - Go Modules
  - Python - pip

@@ -24,6 +24,15 @@ suite('resolveContinueOnError', () => {
 			}
 		}
 	})
+
+	test('opts true overrides env false', () => {
+		process.env.TRUSTIFY_DA_CONTINUE_ON_ERROR = 'false'
+		try {
+			expect(resolveContinueOnError({ continueOnError: true })).to.be.true
+		} finally {
+			delete process.env.TRUSTIFY_DA_CONTINUE_ON_ERROR
+		}
+	})
 })
 
 suite('resolveBatchMetadata', () => {
@@ -46,6 +55,15 @@ suite('resolveBatchMetadata', () => {
 			} else {
 				process.env.TRUSTIFY_DA_BATCH_METADATA = prev
 			}
+		}
+	})
+
+	test('opts false overrides env true', () => {
+		process.env.TRUSTIFY_DA_BATCH_METADATA = 'true'
+		try {
+			expect(resolveBatchMetadata({ batchMetadata: false })).to.be.false
+		} finally {
+			delete process.env.TRUSTIFY_DA_BATCH_METADATA
 		}
 	})
 })

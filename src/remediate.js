@@ -157,10 +157,11 @@ export function findManifests(targetPath) {
  * @param {boolean} [options.dryRun=false] - preview changes without modifying files (applies by default)
  * @param {string} [options.providers] - comma-separated provider list
  * @param {string} [options.sources] - comma-separated source list
+ * @param {string} [options.backendUrl] - Trustify DA backend URL
  * @param {boolean} [options.perDependencyChanges=false] - when true, each remediation is populated with
  *   a `changes` array describing the isolated, single-dependency edit (see {@link DependencyFix}). This lets
  *   callers create one commit/PR per dependency without attributing diff hunks themselves.
- * @returns {Promise<{exitCode: number, remediations: Remediation[], manifests: string[], appliedFiles: string[]}>}
+ * @returns {Promise<{exitCode: number, output: string, remediations: Remediation[], manifests: string[], appliedFiles: string[]}>}
  *   exitCode is 2 for a dry-run that found remediations (nothing written), 0 otherwise. `remediations`
  *   is the structured, per-manifest list of applicable updates — each entry carries the originating
  *   manifest path(s) in `files` so callers can group and create per-dependency changes. `appliedFiles`
@@ -168,7 +169,7 @@ export function findManifests(targetPath) {
  *   truthful "updated N files" count without conflating "had remediations" with "was written".
  */
 export async function runRemediation(targetPath, options = {}) {
-	const { dryRun = false, providers, sources, perDependencyChanges = false } = options
+	const { dryRun = false, providers, sources, perDependencyChanges = false, backendUrl } = options
 
 	const manifestPaths = findManifests(targetPath)
 	if (manifestPaths.length === 0) {
@@ -176,10 +177,13 @@ export async function runRemediation(targetPath, options = {}) {
 	}
 
 	const opts = {}
-	if (providers) {
+	if (backendUrl !== undefined) {
+		opts.TRUSTIFY_DA_BACKEND_URL = backendUrl
+	}
+	if (providers !== undefined) {
 		opts.TRUSTIFY_DA_PROVIDERS = providers
 	}
-	if (sources) {
+	if (sources !== undefined) {
 		opts.TRUSTIFY_DA_SOURCES = sources
 	}
 

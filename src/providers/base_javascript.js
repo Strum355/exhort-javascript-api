@@ -591,7 +591,7 @@ export default class Base_javascript {
 			}
 
 			// Try to find the command in the following order:
-			// 1. Custom path from environment/opts (via getCustomPath)
+			// 1. Custom path from opts/environment (via getCustomPath)
 			// 2. Local node_modules/.bin
 			// 3. Global installation
 			let cmd = this.#cmd;
@@ -624,4 +624,3 @@ export default class Base_javascript {
 		return output;
 	}
 }
-
