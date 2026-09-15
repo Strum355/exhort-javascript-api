@@ -24,7 +24,7 @@ import {
 export { parseImageRef } from "./oci_image/utils.js";
 export { ImageRef } from "./oci_image/images.js";
 export { getProjectLicense, findLicenseFilePath, identifyLicense, getLicenseDetails, licensesFromReport, normalizeLicensesResponse, runLicenseCheck, getCompatibility } from "./license/index.js";
-export { extractRemediations } from "./remediation.js";
+export { extractRemediations, maxSeverity } from "./remediation.js";
 export { generateReport, generateDeduplicationKey } from './remediation_report.js'
 export { loadConfig, mergeConfig, resolveConfig, CONFIG_FILENAMES } from './config.js'
 export { runRemediation, findManifests } from './remediate.js'
