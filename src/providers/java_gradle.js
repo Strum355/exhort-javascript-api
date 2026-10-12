@@ -122,7 +122,8 @@ export default class Java_gradle extends Base_java {
 		return {
 			ecosystem: ecosystem_gradle,
 			content: await this.#createSbomStackAnalysis(buildManifest, opts),
-			contentType: 'application/vnd.cyclonedx+json'
+			contentType: 'application/vnd.cyclonedx+json',
+			...(buildManifest !== manifest && { manifestPath: buildManifest })
 		}
 	}
 
@@ -138,7 +139,8 @@ export default class Java_gradle extends Base_java {
 		return {
 			ecosystem: ecosystem_gradle,
 			content: await this.#getSbomForComponentAnalysis(buildManifest, opts),
-			contentType: 'application/vnd.cyclonedx+json'
+			contentType: 'application/vnd.cyclonedx+json',
+			...(buildManifest !== manifest && { manifestPath: buildManifest })
 		}
 	}
 

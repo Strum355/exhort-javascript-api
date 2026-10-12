@@ -104,6 +104,39 @@ suite('testing the java-gradle-groovy data provider', () => {
 				expect(err.message).to.include('No parent build.gradle found')
 			}
 		})
+
+		test('provideStack with TOML path sets manifestPath to the resolved build file', async () => {
+			let depTree = fs.readFileSync(`${dir}/depTree.txt`).toString()
+			let props = fs.readFileSync(`${dir}/gradle.properties`).toString()
+			let provider = new Java_gradle_groovy()
+			mockInvokeCommand(provider, depTree, props)
+
+			let result = await provider.provideStack(`${dir}/gradle/libs.versions.toml`)
+
+			expect(result.manifestPath).to.match(/build\.gradle(\.kts)?$/)
+		}).timeout(process.env.GITHUB_ACTIONS ? 40000 : 10000)
+
+		test('provideStack with build.gradle path does not set manifestPath', async () => {
+			let depTree = fs.readFileSync(`${dir}/depTree.txt`).toString()
+			let props = fs.readFileSync(`${dir}/gradle.properties`).toString()
+			let provider = new Java_gradle_groovy()
+			mockInvokeCommand(provider, depTree, props)
+
+			let result = await provider.provideStack(`${dir}/build.gradle`)
+
+			expect(result.manifestPath).to.be.undefined
+		}).timeout(process.env.GITHUB_ACTIONS ? 40000 : 10000)
+
+		test('provideComponent with TOML path sets manifestPath to the resolved build file', async () => {
+			let depTree = fs.readFileSync(`${dir}/depTree.txt`).toString()
+			let props = fs.readFileSync(`${dir}/gradle.properties`).toString()
+			let provider = new Java_gradle_groovy()
+			mockInvokeCommand(provider, depTree, props)
+
+			let result = await provider.provideComponent(`${dir}/gradle/libs.versions.toml`)
+
+			expect(result.manifestPath).to.match(/build\.gradle(\.kts)?$/)
+		}).timeout(process.env.GITHUB_ACTIONS ? 40000 : 10000)
 	})
 
 	suite('artifact hash computation', () => {

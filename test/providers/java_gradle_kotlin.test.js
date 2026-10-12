@@ -104,6 +104,39 @@ suite('testing the java-gradle-kotlin data provider', () => {
 				expect(err.message).to.include('No parent build.gradle found')
 			}
 		})
+
+		test('provideStack with TOML path sets manifestPath to the resolved build file', async () => {
+			let depTree = fs.readFileSync(`${tomlDir}/depTree.txt`).toString()
+			let props = fs.readFileSync(`${tomlDir}/gradle.properties`).toString()
+			let provider = new Java_gradle_kotlin()
+			mockInvokeCommand(provider, depTree, props)
+
+			let result = await provider.provideStack(`${tomlDir}/gradle/libs.versions.toml`)
+
+			expect(result.manifestPath).to.equal(`${tomlDir}/build.gradle.kts`)
+		}).timeout(process.env.GITHUB_ACTIONS ? 40000 : 10000)
+
+		test('provideStack with build.gradle.kts path does not set manifestPath', async () => {
+			let depTree = fs.readFileSync(`${tomlDir}/depTree.txt`).toString()
+			let props = fs.readFileSync(`${tomlDir}/gradle.properties`).toString()
+			let provider = new Java_gradle_kotlin()
+			mockInvokeCommand(provider, depTree, props)
+
+			let result = await provider.provideStack(`${tomlDir}/build.gradle.kts`)
+
+			expect(result.manifestPath).to.be.undefined
+		}).timeout(process.env.GITHUB_ACTIONS ? 40000 : 10000)
+
+		test('provideComponent with TOML path sets manifestPath to the resolved build file', async () => {
+			let depTree = fs.readFileSync(`${tomlDir}/depTree.txt`).toString()
+			let props = fs.readFileSync(`${tomlDir}/gradle.properties`).toString()
+			let provider = new Java_gradle_kotlin()
+			mockInvokeCommand(provider, depTree, props)
+
+			let result = await provider.provideComponent(`${tomlDir}/gradle/libs.versions.toml`)
+
+			expect(result.manifestPath).to.equal(`${tomlDir}/build.gradle.kts`)
+		}).timeout(process.env.GITHUB_ACTIONS ? 40000 : 10000)
 	})
 
 	suite('artifact hash computation', () => {
