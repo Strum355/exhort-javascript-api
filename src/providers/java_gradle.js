@@ -67,12 +67,19 @@ export default class Java_gradle extends Base_java {
 
 	isSupported(manifestName) {
 		return this._getManifestName() === manifestName
+			|| manifestName.endsWith('.versions.toml')
 	}
 
 	/**
 	 * @param {string} manifestDir - the directory where the manifest lies
- 	 */
-	validateLockFile() { return true; }
+	 * @returns {boolean}
+	 */
+	validateLockFile(manifestDir) {
+		if (fs.existsSync(path.join(manifestDir, this._getManifestName()))) {
+			return true
+		}
+		return fs.existsSync(path.join(path.dirname(manifestDir), this._getManifestName()))
+	}
 
 	/**
 	 * Gradle manifests (build.gradle, build.gradle.kts) have no standard license field.
@@ -89,10 +96,32 @@ export default class Java_gradle extends Base_java {
 	 */
 
 
+	/**
+	 * For TOML version catalogs, resolves to the parent build.gradle[.kts].
+	 * Returns the manifest unchanged for regular Gradle build files.
+	 * @param {string} manifest
+	 * @returns {string}
+	 * @throws {Error} if the TOML file has no parent build file
+	 */
+	#resolveBuildManifest(manifest) {
+		if (!path.basename(manifest).endsWith('.versions.toml')) {
+			return manifest
+		}
+		const projectRoot = path.dirname(path.dirname(manifest))
+		for (const name of ['build.gradle.kts', 'build.gradle']) {
+			const candidate = path.join(projectRoot, name)
+			if (fs.existsSync(candidate)) {
+				return candidate
+			}
+		}
+		throw new Error(`No parent build.gradle found for ${path.basename(manifest)}`)
+	}
+
 	async provideStack(manifest, opts = {}) {
+		const buildManifest = this.#resolveBuildManifest(manifest)
 		return {
 			ecosystem: ecosystem_gradle,
-			content: await this.#createSbomStackAnalysis(manifest, opts),
+			content: await this.#createSbomStackAnalysis(buildManifest, opts),
 			contentType: 'application/vnd.cyclonedx+json'
 		}
 	}
@@ -105,9 +134,10 @@ export default class Java_gradle extends Base_java {
 	 */
 
 	async provideComponent(manifest, opts = {}) {
+		const buildManifest = this.#resolveBuildManifest(manifest)
 		return {
 			ecosystem: ecosystem_gradle,
-			content: await this.#getSbomForComponentAnalysis(manifest, opts),
+			content: await this.#getSbomForComponentAnalysis(buildManifest, opts),
 			contentType: 'application/vnd.cyclonedx+json'
 		}
 	}
@@ -229,7 +259,7 @@ export default class Java_gradle extends Base_java {
 	 * Create a Dot Graph dependency tree for a manifest path.
 	 * @param {string} manifest - path for pom.xml
 	 * @param {{}} [opts={}] - optional various options to pass along the application
-	 * @returns {string} the Dot Graph content
+	 * @returns {Promise<string>} the Dot Graph content
 	 * @private
 	 */
 	async #createSbomStackAnalysis(manifest, opts = {}) {
@@ -284,7 +314,7 @@ export default class Java_gradle extends Base_java {
 	/**
 	 * Create a dependency list for a manifest content.
 	 * @param {{}} [opts={}] - optional various options to pass along the application
-	 * @returns {string} - sbom string of the direct dependencies of build.gradle
+	 * @returns {Promise<string>} - sbom string of the direct dependencies of build.gradle
 	 * @private
 	 */
 	async #getSbomForComponentAnalysis(manifestPath, opts = {}) {
