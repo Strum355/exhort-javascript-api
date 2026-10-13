@@ -75,10 +75,30 @@ export default class Java_gradle extends Base_java {
 	 * @returns {boolean}
 	 */
 	validateLockFile(manifestDir) {
-		if (fs.existsSync(path.join(manifestDir, this._getManifestName()))) {
-			return true
+		return this.#findBuildFile(manifestDir) !== undefined
+	}
+
+	/**
+	 * Walk from `startDir` upward looking for a Gradle build file.
+	 * Stops after 5 levels to avoid scanning to the filesystem root.
+	 * @param {string} startDir
+	 * @returns {string|undefined} absolute path to the build file, or undefined
+	 */
+	#findBuildFile(startDir) {
+		const maxDepth = 5
+		let dir = startDir
+		for (let i = 0; i < maxDepth; i++) {
+			for (const name of ['build.gradle.kts', 'build.gradle']) {
+				const candidate = path.join(dir, name)
+				if (fs.existsSync(candidate)) {
+					return candidate
+				}
+			}
+			const parent = path.dirname(dir)
+			if (parent === dir) { break }
+			dir = parent
 		}
-		return fs.existsSync(path.join(path.dirname(manifestDir), this._getManifestName()))
+		return undefined
 	}
 
 	/**
@@ -107,14 +127,11 @@ export default class Java_gradle extends Base_java {
 		if (!path.basename(manifest).endsWith('.versions.toml')) {
 			return manifest
 		}
-		const projectRoot = path.dirname(path.dirname(manifest))
-		for (const name of ['build.gradle.kts', 'build.gradle']) {
-			const candidate = path.join(projectRoot, name)
-			if (fs.existsSync(candidate)) {
-				return candidate
-			}
+		const found = this.#findBuildFile(path.dirname(manifest))
+		if (!found) {
+			throw new Error(`No parent build.gradle found for ${path.basename(manifest)}`)
 		}
-		throw new Error(`No parent build.gradle found for ${path.basename(manifest)}`)
+		return found
 	}
 
 	async provideStack(manifest, opts = {}) {
