@@ -1,4 +1,5 @@
-import fs from "fs";
+import fs from "node:fs";
+import path from "node:path";
 
 import { toPurl } from "../tools.js";
 
@@ -15,7 +16,8 @@ export default class Manifest {
 		this.dependencies = this.loadDependencies(content);
 		this.peerDependencies = content.peerDependencies || {};
 		this.optionalDependencies = content.optionalDependencies || {};
-		this.name = content.name;
+		this.hasExplicitName = !!content.name;
+		this.name = content.name || path.basename(path.dirname(path.resolve(manifestPath)));
 		this.version = content.version || DEFAULT_VERSION;
 		this.packageManager = content.packageManager;
 		this.devEngines = content.devEngines;
