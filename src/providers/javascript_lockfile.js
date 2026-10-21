@@ -1,8 +1,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { isDeepStrictEqual } from 'node:util';
 
 import { parseResolution, parseSyml } from '@yarnpkg/parsers';
 import glob from 'fast-glob';
+import { load as yamlLoad, loadAll as yamlLoadAll } from 'js-yaml';
 import micromatch from 'micromatch';
 import semver from 'semver';
 
@@ -463,5 +465,290 @@ export function readYarnGraph(root, manifestPath, manifest, lock) {
 		return context;
 	}
 	graph.rootId = visit(rootId);
+	return graph;
+}
+
+/**
+ * Reads a `pnpm-lock.yaml` document. pnpm 12+ may emit a multi-document YAML
+ * stream; the project graph is always the last document, so a single-document
+ * `load` would throw or silently miss it. Returns the parsed lockfile mapping.
+ * @param {string} file - Absolute path to pnpm-lock.yaml
+ * @returns {Object} The parsed lockfile mapping
+ */
+export function readPnpmLock(file) {
+	let documents;
+	try {
+		documents = yamlLoadAll(fs.readFileSync(file, 'utf8'));
+	} catch (cause) {
+		throw new Error(`Cannot read ${file}: ${cause.message}`, { cause });
+	}
+	const lock = documents.filter(object).at(-1);
+	if (!object(lock)) {
+		throw new Error(`Cannot read ${file}: expected a lockfile mapping.`);
+	}
+	return lock;
+}
+
+/** Resolves the supported major lockfile version (6 or 9). */
+function pnpmLockMajor(lock, file) {
+	const major = parseInt(String(lock.lockfileVersion), 10);
+	if (![6, 9].includes(major)) {
+		throw new Error(`Unsupported pnpm lockfile version ${lock.lockfileVersion} in ${file}. Regenerate a version 6 or 9 lockfile before scanning.`);
+	}
+	return major;
+}
+
+/** Extracts a `{name: specifier}` map from a pnpm importer dependency group. */
+function pnpmSpecifiers(group, file) {
+	const out = {};
+	if (group == null) { return out; }
+	if (!object(group)) { unsupported(file, 'importers', 'expected a dependency mapping'); }
+	for (const [name, entry] of Object.entries(group)) {
+		const specifier = typeof entry === 'string' ? entry : entry?.specifier;
+		if (typeof specifier !== 'string' || !specifier) { unsupported(file, name, 'missing dependency specifier'); }
+		out[name] = specifier;
+	}
+	return out;
+}
+
+/** Reads root overrides and matches pnpm's parent and dependency selectors. */
+function pnpmOverrides(root, rootData, lock, file) {
+	const rootFile = path.join(root, 'package.json');
+	const workspaceFile = path.join(root, 'pnpm-workspace.yaml');
+	const workspace = fs.existsSync(workspaceFile) ? yamlLoad(fs.readFileSync(workspaceFile, 'utf8'), { filename: workspaceFile }) ?? {} : {};
+	if (!object(workspace)) { unsupported(workspaceFile, 'overrides', 'expected a workspace mapping'); }
+	const manifestOverrides = { ...dependencyMap(rootData, 'resolutions', rootFile), ...dependencyMap(rootData.pnpm ?? {}, 'overrides', rootFile) };
+	const configured = Object.keys(manifestOverrides).length ? manifestOverrides : dependencyMap(workspace, 'overrides', workspaceFile);
+	const resolved = {};
+	const selector = value => value.includes('@', 1) ? descriptor(value) : { name: value, range: undefined };
+	const rules = Object.entries(configured).map(([key, value]) => {
+		// Split parent>dependency selectors without mistaking a version range's > for the separator.
+		const delimiter = key.search(/[^ |@]>/) + 1;
+		const target = selector(delimiter ? key.slice(delimiter + 1) : key);
+		const parent = delimiter ? selector(key.slice(0, delimiter)) : undefined;
+		// pnpm records the values of dependency references and catalogs, not their reference syntax.
+		if (value.startsWith('$')) { value = manifestDependencies(rootData, rootFile, true)[value.slice(1)]; }
+		if (value?.startsWith('catalog:')) {
+			const catalog = value.slice(8) ? workspace.catalogs?.[value.slice(8)] : workspace.catalog;
+			value = dependencyMap({ dependencies: catalog }, 'dependencies', workspaceFile)[target.name];
+		}
+		if (typeof value !== 'string' || !value) { unsupported(rootFile, key, 'cannot resolve override'); }
+		resolved[key] = value;
+		return { parent, target, value };
+	});
+	// Different overrides mean the locked versions were selected under different resolution rules.
+	if (!isDeepStrictEqual(resolved, lock.overrides ?? {})) { stale(file, 'overrides', 'have different declarations'); }
+	const intersects = (range, spec) => !range || range === spec || (semver.validRange(range) && semver.validRange(spec) && semver.intersects(range, spec));
+	return (data, manifestFile, name, spec) => {
+		let matches = rules.filter(rule => rule.target.name === name && intersects(rule.target.range, spec) &&
+			(!rule.parent || (rule.parent.name === data.name && (!rule.parent.range || semver.satisfies(data.version, rule.parent.range)))));
+		// Parent-qualified rules take precedence over dependency-only rules.
+		const parentMatches = matches.filter(rule => rule.parent);
+		if (parentMatches.length) { matches = parentMatches; }
+		// pnpm applies the last matching override in declaration order; rules (and the
+		// filtered matches) preserve that order, so take the last match directly.
+		const value = matches.at(-1)?.value;
+		// Local override paths start at the workspace root; importer specifiers start at their manifest.
+		const local = /^(file:|link:)(.*)$/.exec(value ?? '');
+		return local && !path.isAbsolute(local[2])
+			? `${local[1]}${path.relative(path.dirname(manifestFile), path.resolve(root, local[2])).split(path.sep).join('/')}`
+			: value;
+	};
+}
+
+/** Validates manifest declarations against pnpm's importer (the project's lockfile entry). */
+function validatePnpmImporter(manifestFile, data, importer, file, override) {
+	// pnpm can auto-install peers as dependencies, so compare declarations across all sections.
+	const declared = {
+		...dependencyMap(data, 'peerDependencies', manifestFile),
+		...dependencyMap(data, 'devDependencies', manifestFile),
+		...dependencyMap(data, 'dependencies', manifestFile),
+		...dependencyMap(data, 'optionalDependencies', manifestFile),
+	};
+	const recorded = {
+		...pnpmSpecifiers(importer.dependencies, file),
+		...pnpmSpecifiers(importer.devDependencies, file),
+		...pnpmSpecifiers(importer.optionalDependencies, file),
+	};
+	for (const [name, specifier] of Object.entries(recorded)) {
+		if (declared[name] != null && (override(data, manifestFile, name, declared[name]) ?? declared[name]) !== specifier) {
+			// The lockfile was generated from a different dependency declaration, including any override.
+			stale(manifestFile, name, 'has a different dependency declaration');
+		}
+	}
+	for (const section of ['dependencies', 'devDependencies']) {
+		for (const [name, spec] of Object.entries(dependencyMap(data, section, manifestFile))) {
+			// Optional declarations override production declarations, which override development declarations.
+			if (Object.hasOwn(data.optionalDependencies ?? {}, name) ||
+				(section === 'devDependencies' && Object.hasOwn(data.dependencies ?? {}, name))) { continue; }
+			// A '-' override removes the dependency, so pnpm need not record it.
+			if (override(data, manifestFile, name, spec) === '-') { continue; }
+			// Missing or moved required dependencies need a lockfile update.
+			if (!Object.hasOwn(importer[section] ?? {}, name)) { stale(manifestFile, name, `has a different ${section} declaration`); }
+		}
+	}
+}
+
+/**
+ * Reads pnpm's resolved graph from `pnpm-lock.yaml` without invoking pnpm.
+ * Supports lockfileVersion 6 (packages keyed by `/name@version` with inline
+ * dependencies) and 9 (packages keyed by `name@version` for integrity, with a
+ * separate `snapshots` section keyed by `name@version(peer-context)` holding
+ * dependency edges). Peer contexts are preserved in node identity, workspace
+ * `link:` edges resolve to importers, and `file:`/`portal:` directory packages
+ * resolve through their local manifest.
+ * @param {string} root - Workspace root (directory holding pnpm-lock.yaml)
+ * @param {string} manifestPath - Path to the analyzed package.json
+ * @param {Object} manifest - Parsed package.json content
+ * @param {Object} lock - Parsed lockfile (see {@link readPnpmLock})
+ * @returns {LockGraph} The resolved dependency graph
+ */
+export function readPnpmGraph(root, manifestPath, manifest, lock) {
+	const file = path.join(root, 'pnpm-lock.yaml');
+	const major = pnpmLockMajor(lock, file);
+	const prefix = major === 6 ? '/' : '';
+	const packages = object(lock.packages) ? lock.packages : {};
+	const snapshots = major === 6 ? packages : (object(lock.snapshots) ? lock.snapshots : {});
+	const importers = object(lock.importers) ? lock.importers
+		: { '.': { dependencies: lock.dependencies, devDependencies: lock.devDependencies, optionalDependencies: lock.optionalDependencies } };
+
+	const manifests = projectManifests(root, manifestPath, manifest);
+	const override = pnpmOverrides(root, manifests.get(path.join(root, 'package.json')), lock, file);
+	const locals = new Map();
+	for (const [manifestFile, data] of manifests) {
+		const location = path.relative(root, path.dirname(manifestFile)).split(path.sep).join('/') || '.';
+		const importer = importers[location];
+		// Without an importer, the lockfile has no dependency declarations for this project.
+		if (!object(importer)) { stale(manifestFile, data.name, 'is missing from the lockfile'); }
+		validatePnpmImporter(manifestFile, data, importer, file, override);
+		locals.set(location, { data, file: manifestFile });
+	}
+
+	const rootId = path.relative(root, path.dirname(path.resolve(manifestPath))).split(path.sep).join('/') || '.';
+	if (!locals.has(rootId)) { unsupported(file, manifest.name, 'manifest is not in the workspace'); }
+
+	const graph = { rootId: `importer:${rootId}`, nodes: new Map() };
+
+	// Aliases carry a full `name@version` reference in their version field;
+	// registry packages carry a bare version (optionally with a peer suffix).
+	function childId(name, version) {
+		if (major === 6 && object(packages[version])) { return version; }
+		const base = version.split('(')[0].replace(/^\//, '');
+		const at = base.indexOf('@');
+		const colon = base.indexOf(':');
+		return at !== -1 && (colon === -1 || at < colon) ? version : `${prefix}${name}@${version}`;
+	}
+
+	function packageEntry(id) {
+		// v9 shares package metadata across peer contexts, but keeps their dependency snapshots separate.
+		return major === 6 ? packages[id] : packages[id.split('(')[0]];
+	}
+
+	// Archive identities come from package metadata; directory identities come from their manifests.
+	function identity(id) {
+		const entry = packageEntry(id);
+		const directory = entry?.resolution?.directory;
+		if (typeof directory === 'string' || entry?.resolution?.type === 'directory') {
+			if (typeof directory !== 'string') { unsupported(file, id, 'missing local package directory'); }
+			const manifestFile = path.resolve(root, directory, 'package.json');
+			if (!fs.existsSync(manifestFile)) { unsupported(file, id, 'missing local package manifest'); }
+			const data = readJson(manifestFile);
+			if (typeof data.name !== 'string' || !data.name || typeof data.version !== 'string' || !data.version) {
+				unsupported(file, id, 'missing local package identity');
+			}
+			return { name: data.name, version: data.version };
+		}
+		const bare = id.startsWith('/') ? id.slice(1) : id;
+		const parsed = bare.includes('@', 1) ? descriptor(bare.split('(')[0]) : {};
+		const name = entry?.name ?? parsed.name;
+		const version = entry?.version ?? parsed.range;
+		if (typeof name !== 'string' || !name) { unsupported(file, id, 'missing locked package name'); }
+		if (!semver.valid(version)) { unsupported(file, id, 'missing or invalid locked package version'); }
+		return { name, version };
+	}
+
+	// Resolves a dependency edge to a node id, following workspace `link:` edges
+	// to importers. Returns undefined when an optional dependency is absent.
+	// `range` is the importer's recorded specifier (already validated to equal the
+	// effective, override-applied manifest declaration); it is undefined for
+	// transitive snapshot edges, which carry no declared range in the lockfile.
+	function resolve(ownerLocation, name, version, source, optional, range) {
+		if (version.startsWith('link:')) {
+			const location = path.relative(root, path.resolve(root, ownerLocation, version.slice(5))).split(path.sep).join('/') || '.';
+			if (locals.has(location) || object(importers[location])) { return `importer:${location}`; }
+			unsupported(source, name, 'link protocol does not provide package dependency metadata; use a package-aware local protocol');
+		}
+		const id = childId(name, version);
+		if (!object(snapshots[id])) {
+			if (optional) { return undefined; }
+			// A required edge points to a missing snapshot, so the locked graph is incomplete.
+			stale(source, name, 'has no locked resolution');
+		}
+		// Even if declarations match, the resolved package's real version must still satisfy the range.
+		if (range != null) { validateRange(source, name, range, identity(id)); }
+		return id;
+	}
+
+	// Production edges exclude development dependencies; optional edges are
+	// skipped when their resolution is absent.
+	function edges(groups, source) {
+		const out = [];
+		for (const [group, optional] of groups) {
+			if (group == null) { continue; }
+			if (!object(group)) { unsupported(source, 'dependencies', 'expected a dependency mapping'); }
+			for (const [name, entry] of Object.entries(group)) {
+				const version = typeof entry === 'string' ? entry : entry?.version;
+				if (typeof version !== 'string' || !version) { unsupported(source, name, 'missing resolved version'); }
+				out.push([name, version, optional, typeof entry === 'string' ? undefined : entry?.specifier]);
+			}
+		}
+		return out;
+	}
+
+	// An explicit stack avoids call-stack overflow on deep dependency chains.
+	function visit(rootId) {
+		const stack = [rootId];
+		while (stack.length > 0) {
+			const id = stack.pop();
+			if (graph.nodes.has(id)) { continue; }
+			const children = [];
+			if (id.startsWith('importer:')) {
+				const location = id.slice('importer:'.length);
+				let local = locals.get(location);
+				if (!local) {
+					const manifestFile = path.resolve(root, location, 'package.json');
+					const data = readJson(manifestFile);
+					validatePnpmImporter(manifestFile, data, importers[location], file, override);
+					local = { data, file: manifestFile };
+					locals.set(location, local);
+				}
+				const source = local.file;
+				const node = { name: local.data.name ?? location, version: local.data.version ?? 'v0.0.0', dependencies: new Map(), hashes: undefined };
+				graph.nodes.set(id, node);
+				const importer = importers[location];
+				for (const [name, version, optional, specifier] of edges([[importer.dependencies, false], [importer.optionalDependencies, true]], source)) {
+					const childNodeId = resolve(location, name, version, source, optional, specifier);
+					if (childNodeId == null) { continue; }
+					node.dependencies.set(name, childNodeId);
+					children.push(childNodeId);
+				}
+			} else {
+				const { name, version } = identity(id);
+				const node = { name, version, dependencies: new Map(), hashes: hashes({ integrity: packageEntry(id)?.resolution?.integrity }) };
+				graph.nodes.set(id, node);
+				const snapshot = snapshots[id];
+				for (const [depName, depVersion, optional] of edges([[snapshot?.dependencies, false], [snapshot?.optionalDependencies, true]], file)) {
+					const childNodeId = resolve('.', depName, depVersion, file, optional);
+					if (childNodeId == null) { continue; }
+					node.dependencies.set(depName, childNodeId);
+					children.push(childNodeId);
+				}
+			}
+			// Push in reverse to visit dependencies in their original declaration order.
+			for (let i = children.length - 1; i >= 0; i--) { stack.push(children[i]); }
+		}
+	}
+
+	visit(graph.rootId);
 	return graph;
 }

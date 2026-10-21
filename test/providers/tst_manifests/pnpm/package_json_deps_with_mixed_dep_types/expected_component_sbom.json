@@ -1,0 +1,105 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.6",
+  "version": 1,
+  "metadata": {
+    "timestamp": "2023-08-07T00:00:00.000Z",
+    "component": {
+      "name": "mixed-deps-test",
+      "version": "1.0.0",
+      "purl": "pkg:npm/mixed-deps-test@1.0.0",
+      "type": "application",
+      "bom-ref": "pkg:npm/mixed-deps-test@1.0.0"
+    },
+    "tools": {
+      "components": [
+        {
+          "type": "application",
+          "name": "trustify-da-javascript-client",
+          "version": "0.4.0"
+        }
+      ]
+    }
+  },
+  "components": [
+    {
+      "name": "axios",
+      "version": "0.19.0",
+      "purl": "pkg:npm/axios@0.19.0",
+      "type": "library",
+      "bom-ref": "pkg:npm/axios@0.19.0",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "d6ebcaa8a42d6b7281c48cf5e05dafd3a0041d9fdd22878a7db4d190ad44e68aa30e7b847ab2e66138090790224191c97258e98354ee4737630d1d3aa8d9340d"
+        }
+      ]
+    },
+    {
+      "name": "express",
+      "version": "4.17.1",
+      "purl": "pkg:npm/express@4.17.1",
+      "type": "library",
+      "bom-ref": "pkg:npm/express@4.17.1",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "98727d3bbf51aa5ba9851adcc365ff19387793db55bfc61ca326382a487858331460a45952ad21d68d30dabaebc41a8ced5a1e515aa06f6ef19443174e762de2"
+        }
+      ]
+    },
+    {
+      "name": "lodash",
+      "version": "4.17.19",
+      "purl": "pkg:npm/lodash@4.17.19",
+      "type": "library",
+      "bom-ref": "pkg:npm/lodash@4.17.19",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "24dbddf17111f46417d2fdaa260b1a37f9b3142340e4145efe3f0937d77eb56c862d2a1d2901ca16271dc0d6335b0237c2346768a3ec1a3d579018f1fc5f7a0d"
+        }
+      ]
+    },
+    {
+      "name": "minimist",
+      "version": "1.2.0",
+      "purl": "pkg:npm/minimist@1.2.0",
+      "type": "library",
+      "bom-ref": "pkg:npm/minimist@1.2.0",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "ed697e273f88196b92760b10109e09ba7574b22fe2321838d8c9d0406ea1d51e9335e55e9e9e14f71e420b9bff818ab3fdf10d2d02130165e274db552f434d6f"
+        }
+      ]
+    }
+  ],
+  "dependencies": [
+    {
+      "ref": "pkg:npm/mixed-deps-test@1.0.0",
+      "dependsOn": [
+        "pkg:npm/axios@0.19.0",
+        "pkg:npm/express@4.17.1",
+        "pkg:npm/lodash@4.17.19",
+        "pkg:npm/minimist@1.2.0"
+      ]
+    },
+    {
+      "ref": "pkg:npm/axios@0.19.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/express@4.17.1",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/lodash@4.17.19",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/minimist@1.2.0",
+      "dependsOn": []
+    }
+  ]
+}

@@ -1,9 +1,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { load as yamlLoad } from 'js-yaml';
-
 import Base_javascript, { sriToHash } from './base_javascript.js';
+import { readPnpmGraph, readPnpmLock } from './javascript_lockfile.js';
 
 export default class Javascript_pnpm extends Base_javascript {
 
@@ -11,11 +10,21 @@ export default class Javascript_pnpm extends Base_javascript {
 		return "pnpm-lock.yaml";
 	}
 
+	_cmdName() {
+		return "pnpm";
+	}
+
+	/** Initializes the provider without resolving the pnpm executable. */
+	_setUp(manifestPath) {
+		this._setUpManifest(manifestPath);
+	}
+
 	/**
-	 * Parses `pnpm-lock.yaml` (lockfileVersion 9) into a hash map keyed by
-	 * `name@version`. Entries in the `packages` section are keyed by
-	 * `<name>@<version>` (optionally followed by a `(peer@x)` suffix); the
-	 * `resolution.integrity` field holds an SRI string.
+	 * Parses `pnpm-lock.yaml` into a hash map keyed by `name@version`. Entries in
+	 * the `packages` section are keyed by `[/]<name>@<version>` (optionally
+	 * followed by a `(peer@x)` suffix); the `resolution.integrity` field holds an
+	 * SRI string. Handles lockfileVersion 6 (leading-slash keys) and 9, including
+	 * multi-document streams (see {@link readPnpmLock}).
 	 * @param {string} lockDir - Directory containing pnpm-lock.yaml
 	 * @returns {Map<string, Array<{alg: string, content: string}>>} Hash map
 	 * @protected
@@ -28,7 +37,7 @@ export default class Javascript_pnpm extends Base_javascript {
 		}
 		let lock;
 		try {
-			lock = yamlLoad(fs.readFileSync(lockPath, 'utf-8'));
+			lock = readPnpmLock(lockPath);
 		} catch (_) {
 			return map;
 		}
@@ -38,14 +47,13 @@ export default class Javascript_pnpm extends Base_javascript {
 			if (!key || !integrity) {
 				continue;
 			}
-			// Strip any peer-dependency suffix, then split name from version
-			const base = key.split('(')[0];
-			const at = base.lastIndexOf('@');
-			if (at <= 0) {
-				continue;
-			}
-			const name = base.slice(0, at);
-			const version = base.slice(at + 1);
+			// Strip the v6 leading slash and any peer-dependency suffix, then split
+			// name from version.
+			const bare = key.startsWith('/') ? key.slice(1) : key;
+			const base = bare.split('(')[0];
+			const at = base.indexOf('@', 1);
+			const name = entry.name ?? (at > 0 ? base.slice(0, at) : undefined);
+			const version = entry.version ?? (at > 0 ? base.slice(at + 1) : undefined);
 			const hash = sriToHash(integrity);
 			if (name && version && hash) {
 				map.set(`${name}@${version}`, [hash]);
@@ -54,28 +62,24 @@ export default class Javascript_pnpm extends Base_javascript {
 		return map;
 	}
 
-	_cmdName() {
-		return "pnpm";
-	}
-
-	_listCmdArgs(includeTransitive) {
-		return ['ls', includeTransitive ? '--depth=Infinity' : '--depth=0', '--prod', '--json', '-r'];
-	}
-
-	_updateLockFileCmdArgs() {
-		return ['install', '--frozen-lockfile'];
-	}
-
-	_buildDependencyTree(includeTransitive, opts = {}) {
-		// pnpm ls --json returns an array with one entry per workspace package.
-		// When analyzing a workspace member, find its entry by name instead of
-		// blindly taking the first element (which is the workspace root).
-		const tree = super._buildDependencyTree(includeTransitive, opts);
-		if (Array.isArray(tree) && tree.length > 0) {
-			const memberName = this._getManifest().name;
-			return tree.find(pkg => pkg.name === memberName) || tree[0];
+	/**
+	 * Builds the dependency graph directly from `pnpm-lock.yaml`, requiring a
+	 * pre-existing lockfile and invoking no package manager.
+	 * @param {boolean} _includeTransitive - Unused; the full graph is always read
+	 * @param {Object} [opts={}] - Configuration options (may set the workspace dir)
+	 * @returns {import('./javascript_lockfile.js').LockGraph} The dependency graph
+	 * @protected
+	 */
+	_buildDependencyTree(_includeTransitive, opts = {}) {
+		const manifest = this._getManifest();
+		const lockDir = this._findLockFileDir(path.dirname(manifest.manifestPath), opts);
+		if (!lockDir) {
+			throw new Error('pnpm analysis requires a lockfile. Generate pnpm-lock.yaml before scanning.');
 		}
-		return {};
+		const lock = readPnpmLock(path.join(lockDir, this._lockFileName()));
+		const graph = readPnpmGraph(lockDir, manifest.manifestPath, manifest.content, lock);
+		this._loadHashes(lockDir);
+		return graph;
 	}
 
 }

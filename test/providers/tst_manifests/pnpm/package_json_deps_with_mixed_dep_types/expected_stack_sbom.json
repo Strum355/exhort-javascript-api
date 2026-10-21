@@ -1,0 +1,1135 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.6",
+  "version": 1,
+  "metadata": {
+    "timestamp": "2023-08-07T00:00:00.000Z",
+    "component": {
+      "name": "mixed-deps-test",
+      "version": "1.0.0",
+      "purl": "pkg:npm/mixed-deps-test@1.0.0",
+      "type": "application",
+      "bom-ref": "pkg:npm/mixed-deps-test@1.0.0"
+    },
+    "tools": {
+      "components": [
+        {
+          "type": "application",
+          "name": "trustify-da-javascript-client",
+          "version": "0.4.0"
+        }
+      ]
+    }
+  },
+  "components": [
+    {
+      "name": "axios",
+      "version": "0.19.0",
+      "purl": "pkg:npm/axios@0.19.0",
+      "type": "library",
+      "bom-ref": "pkg:npm/axios@0.19.0",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "d6ebcaa8a42d6b7281c48cf5e05dafd3a0041d9fdd22878a7db4d190ad44e68aa30e7b847ab2e66138090790224191c97258e98354ee4737630d1d3aa8d9340d"
+        }
+      ]
+    },
+    {
+      "name": "express",
+      "version": "4.17.1",
+      "purl": "pkg:npm/express@4.17.1",
+      "type": "library",
+      "bom-ref": "pkg:npm/express@4.17.1",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "98727d3bbf51aa5ba9851adcc365ff19387793db55bfc61ca326382a487858331460a45952ad21d68d30dabaebc41a8ced5a1e515aa06f6ef19443174e762de2"
+        }
+      ]
+    },
+    {
+      "name": "minimist",
+      "version": "1.2.0",
+      "purl": "pkg:npm/minimist@1.2.0",
+      "type": "library",
+      "bom-ref": "pkg:npm/minimist@1.2.0",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "ed697e273f88196b92760b10109e09ba7574b22fe2321838d8c9d0406ea1d51e9335e55e9e9e14f71e420b9bff818ab3fdf10d2d02130165e274db552f434d6f"
+        }
+      ]
+    },
+    {
+      "name": "lodash",
+      "version": "4.17.19",
+      "purl": "pkg:npm/lodash@4.17.19",
+      "type": "library",
+      "bom-ref": "pkg:npm/lodash@4.17.19",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "24dbddf17111f46417d2fdaa260b1a37f9b3142340e4145efe3f0937d77eb56c862d2a1d2901ca16271dc0d6335b0237c2346768a3ec1a3d579018f1fc5f7a0d"
+        }
+      ]
+    },
+    {
+      "name": "follow-redirects",
+      "version": "1.5.10",
+      "purl": "pkg:npm/follow-redirects@1.5.10",
+      "type": "library",
+      "bom-ref": "pkg:npm/follow-redirects@1.5.10",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "d15e65e028b3cefaade43e386935db159cfe16dc97575beb0cdeaaade971b5f610296d0a3b45b64ff86413cc6f19aff9e342e466591a5233b86a29584c5b4755"
+        }
+      ]
+    },
+    {
+      "name": "is-buffer",
+      "version": "2.0.5",
+      "purl": "pkg:npm/is-buffer@2.0.5",
+      "type": "library",
+      "bom-ref": "pkg:npm/is-buffer@2.0.5",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "8b647accd143c20107272414b49124d17162d62d1d3c59ffa2a8cadffbcf09c0de26f5b9350f3757c41b89c7c5d52ba939a07487c9ed8010b662213b75fc9cb5"
+        }
+      ]
+    },
+    {
+      "name": "accepts",
+      "version": "1.3.8",
+      "purl": "pkg:npm/accepts@1.3.8",
+      "type": "library",
+      "bom-ref": "pkg:npm/accepts@1.3.8",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "3d802d8536b69b654ac6ebd20f70cf0bf1b2f94fac380d4b02e4fc9a4991bafc3e34009269e5c443e34771517bace365eaa71ac55dd4b9e9b06b093eefe4892f"
+        }
+      ]
+    },
+    {
+      "name": "array-flatten",
+      "version": "1.1.1",
+      "purl": "pkg:npm/array-flatten@1.1.1",
+      "type": "library",
+      "bom-ref": "pkg:npm/array-flatten@1.1.1",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "3c254042cc167a6bba51dc6c0c5157ffe815798a8a0287770f75159bdd631f0ca782e3b002f60f871f2736533ef8da9170ae82c71a5469f8e684874a88789baa"
+        }
+      ]
+    },
+    {
+      "name": "body-parser",
+      "version": "1.19.0",
+      "purl": "pkg:npm/body-parser@1.19.0",
+      "type": "library",
+      "bom-ref": "pkg:npm/body-parser@1.19.0",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "76110fb3bd943db0e701027d64a30d4cfea9b496a2a2784fe5c05be78d675cf956eb425ea68f5157f6b87d7e17596f42b8534adb692b86b8f5fab83389f342b3"
+        }
+      ]
+    },
+    {
+      "name": "content-disposition",
+      "version": "0.5.3",
+      "purl": "pkg:npm/content-disposition@0.5.3",
+      "type": "library",
+      "bom-ref": "pkg:npm/content-disposition@0.5.3",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "1313b4efbe2290439b200115f640e8e74a3eefd54251d101ea7ea5cca806c2ea5c55e46586b8f7a8601fc2af06eae0498e4a8bae14f4a846057169e0f33d73d2"
+        }
+      ]
+    },
+    {
+      "name": "content-type",
+      "version": "1.0.5",
+      "purl": "pkg:npm/content-type@1.0.5",
+      "type": "library",
+      "bom-ref": "pkg:npm/content-type@1.0.5",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "9d38ea7dc045122a4a7570afe180d05827e670b64a9bcd65745d29028a53bf2ac51956dc47a3ff54001de46ecdfb4b53afc42a894d2d15a743e852b836d27038"
+        }
+      ]
+    },
+    {
+      "name": "cookie",
+      "version": "0.4.0",
+      "purl": "pkg:npm/cookie@0.4.0",
+      "type": "library",
+      "bom-ref": "pkg:npm/cookie@0.4.0",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "f87a7c7cba79ef09d44add2d634b47117878be86510e7a08ad93ea968dc33e2238cbd97083f8eac7ed4e9bde3f5ba65a3c33946e78ceb7ff7dc3aeb393e9755e"
+        }
+      ]
+    },
+    {
+      "name": "cookie-signature",
+      "version": "1.0.6",
+      "purl": "pkg:npm/cookie-signature@1.0.6",
+      "type": "library",
+      "bom-ref": "pkg:npm/cookie-signature@1.0.6",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "4000f395a1dcf22715f08eef6da257270a1df47598a7cb82a9fd716b839f36ed53ec9571408ad480e5ad1dd343b4f8b2c2615b892d76563a2d2172eb28cde8ad"
+        }
+      ]
+    },
+    {
+      "name": "debug",
+      "version": "2.6.9",
+      "purl": "pkg:npm/debug@2.6.9",
+      "type": "library",
+      "bom-ref": "pkg:npm/debug@2.6.9",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "6c2ec496b7496899cf6c03fed44a2d62fa99b1bdde725e708ba05f8ba0494d470da30a7a72fb298348d7ce74532838e6fc4ec076014155e00f54c35c286b0730"
+        }
+      ]
+    },
+    {
+      "name": "depd",
+      "version": "1.1.2",
+      "purl": "pkg:npm/depd@1.1.2",
+      "type": "library",
+      "bom-ref": "pkg:npm/depd@1.1.2",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "ede98f4e5e83a68e894573978cb471724f8594b457e7ce3b70b2849f4d0f2c081cde0da14d9660afe7b8736bfa4294a62de14fde7e72528edfb7a6af04aff98d"
+        }
+      ]
+    },
+    {
+      "name": "encodeurl",
+      "version": "1.0.2",
+      "purl": "pkg:npm/encodeurl@1.0.2",
+      "type": "library",
+      "bom-ref": "pkg:npm/encodeurl@1.0.2",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "4cf257abc26a15a5589b609698fbe73f6232a3865233bfd029c4a6b8c2c339b7e91f97e2ed150699dfeb4c37feaeeb7fb1a88389011e5533600262447403b1d3"
+        }
+      ]
+    },
+    {
+      "name": "escape-html",
+      "version": "1.0.3",
+      "purl": "pkg:npm/escape-html@1.0.3",
+      "type": "library",
+      "bom-ref": "pkg:npm/escape-html@1.0.3",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "3624aea59e0e7ae1b0afaf251887b29bf92c219309a1d506392099fc54a74f172b7a46efaab81d53194938ca628da299563009ad6ac6b3fe89cbc38cbb28fda3"
+        }
+      ]
+    },
+    {
+      "name": "etag",
+      "version": "1.8.1",
+      "purl": "pkg:npm/etag@1.8.1",
+      "type": "library",
+      "bom-ref": "pkg:npm/etag@1.8.1",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "6882f9171ee66b055adf4d1a976067104e2236fa35a844f12eb3c8fe8d392fbcfa828edf0b0d49e844266cae05989d804bb920545fca1195ae7c17dd0a531c3e"
+        }
+      ]
+    },
+    {
+      "name": "finalhandler",
+      "version": "1.1.2",
+      "purl": "pkg:npm/finalhandler@1.1.2",
+      "type": "library",
+      "bom-ref": "pkg:npm/finalhandler@1.1.2",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "68059c5b9eeec5536b419a855e3213a56dec2144261c61b7a926fd9946a1f4c80c0b835e5a134e94d8d7118ab71e3440bcbe9aad4be2646189b0183acf4cec58"
+        }
+      ]
+    },
+    {
+      "name": "fresh",
+      "version": "0.5.2",
+      "purl": "pkg:npm/fresh@0.5.2",
+      "type": "library",
+      "bom-ref": "pkg:npm/fresh@0.5.2",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "cc9da6418335f2b1053ae75e57819285318843b45bcc0ee8cdb53d23f5c1a66ee4aa0332c209b294cc171f16499a45686249daf5dda95575573dd6133fd7a3f1"
+        }
+      ]
+    },
+    {
+      "name": "merge-descriptors",
+      "version": "1.0.1",
+      "purl": "pkg:npm/merge-descriptors@1.0.1",
+      "type": "library",
+      "bom-ref": "pkg:npm/merge-descriptors@1.0.1",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "7028ba837fd9af58aa422eb249bb1e3355efa286bdf0dd30df58f3518ad73d7db1a8e6e61461c9d2d439bbbe07de6561ef02e8b93b1e672608ab7f60f1c369d7"
+        }
+      ]
+    },
+    {
+      "name": "methods",
+      "version": "1.1.2",
+      "purl": "pkg:npm/methods@1.1.2",
+      "type": "library",
+      "bom-ref": "pkg:npm/methods@1.1.2",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "89c9401de36a366ebccc5b676747bed4bdb250876fccda1ab8a53858103756f1ffbcf162785eea7d197051953e0c0f4ff5b3d7212f74ba5c68528087db7b15db"
+        }
+      ]
+    },
+    {
+      "name": "on-finished",
+      "version": "2.3.0",
+      "purl": "pkg:npm/on-finished@2.3.0",
+      "type": "library",
+      "bom-ref": "pkg:npm/on-finished@2.3.0",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "8a4a9d906000c9ffd7fe03e15c6bdf800cad0d9b436ebf9b90d509d0df61e4c23f7667600acde5ea1a07adc52fe35b1129ec378c8c2ba78a900d788af7d52dc3"
+        }
+      ]
+    },
+    {
+      "name": "parseurl",
+      "version": "1.3.3",
+      "purl": "pkg:npm/parseurl@1.3.3",
+      "type": "library",
+      "bom-ref": "pkg:npm/parseurl@1.3.3",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "0a2c9e3b1153fc96723799b4cfd3df5f0e1208127a4b2833d43a65d30aa39610c418604fd469ec51510bd29eb78681b57dc8f77c7ca75e2f4d60ee2758e2fea9"
+        }
+      ]
+    },
+    {
+      "name": "path-to-regexp",
+      "version": "0.1.7",
+      "purl": "pkg:npm/path-to-regexp@0.1.7",
+      "type": "library",
+      "bom-ref": "pkg:npm/path-to-regexp@0.1.7",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "e43164ba8aa5bf5b9840ac72f2898505e24f41c768134ecabf6b1f7ab0c2ac0ab5a21394f8c483b300c86e7c7760033ad2a20e9d86b9df00615d6d046cca27ad"
+        }
+      ]
+    },
+    {
+      "name": "proxy-addr",
+      "version": "2.0.8",
+      "purl": "pkg:npm/proxy-addr@2.0.8",
+      "type": "library",
+      "bom-ref": "pkg:npm/proxy-addr@2.0.8",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "e679f1d321b2554718eadf519d6700456b704fd1750fc3bdaedd3c86d3ef9dde3d5b522066d98b921bbd59f333423d5c1718c720ee9ca279d43555b993b015c9"
+        }
+      ]
+    },
+    {
+      "name": "qs",
+      "version": "6.7.0",
+      "purl": "pkg:npm/qs@6.7.0",
+      "type": "library",
+      "bom-ref": "pkg:npm/qs@6.7.0",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "54274144d1535f57f213b35be85628511a3f48f7bad9009a032cc9bd48f045a22c73e35e3c112788796fc459a65f9ebe1d9a61206b55d177828ab06da43ad3c9"
+        }
+      ]
+    },
+    {
+      "name": "range-parser",
+      "version": "1.2.1",
+      "purl": "pkg:npm/range-parser@1.2.1",
+      "type": "library",
+      "bom-ref": "pkg:npm/range-parser@1.2.1",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "1eb82cc7ea2baa8ca09e68456ca68713a736f7a27e1d30105e8c4417a80dba944e9a6189468cb37c6ddc700bdea8206bc2bff6cb143905577f1939796a03b04a"
+        }
+      ]
+    },
+    {
+      "name": "safe-buffer",
+      "version": "5.1.2",
+      "purl": "pkg:npm/safe-buffer@5.1.2",
+      "type": "library",
+      "bom-ref": "pkg:npm/safe-buffer@5.1.2",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "19dd94641243917958ec66c9c5fb04f3f9ef2a45045351b7f1cd6c88de903fa6bd3d3f4c98707c1a7a6c71298c252a05f0b388aedf2e77fc0fb688f2b381bafa"
+        }
+      ]
+    },
+    {
+      "name": "send",
+      "version": "0.17.1",
+      "purl": "pkg:npm/send@0.17.1",
+      "type": "library",
+      "bom-ref": "pkg:npm/send@0.17.1",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "06c54ab2219c40c1704fc531ca9a1b50acafee2ac23511e4d53d06ebcd2f93cf327fa2c107219c649393242ad33f6c5537ac88f978cf25c36e1375787d3f6c02"
+        }
+      ]
+    },
+    {
+      "name": "serve-static",
+      "version": "1.14.1",
+      "purl": "pkg:npm/serve-static@1.14.1",
+      "type": "library",
+      "bom-ref": "pkg:npm/serve-static@1.14.1",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "24caef530139e1e98261695323e846ac6bf923c744c26728ff4d04be4cc822c47b32aac7a276c3f693b630e7c59e9167b65ede72966cfb7996f976d066ef500a"
+        }
+      ]
+    },
+    {
+      "name": "setprototypeof",
+      "version": "1.1.1",
+      "purl": "pkg:npm/setprototypeof@1.1.1",
+      "type": "library",
+      "bom-ref": "pkg:npm/setprototypeof@1.1.1",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "26f74059f6d778819a67d7082e9dfc1e7b594854a8de65a0eb119c249b1df9de1a44c3aa6ae6a0d42eb77497c3c3b39a318c046c730ec4467596a55160fd8e03"
+        }
+      ]
+    },
+    {
+      "name": "statuses",
+      "version": "1.5.0",
+      "purl": "pkg:npm/statuses@1.5.0",
+      "type": "library",
+      "bom-ref": "pkg:npm/statuses@1.5.0",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "3a9677ccffa34f53c8ec8f277a6257e002a6017d3bd199183d5595fc068a4c997eb570931b255d0b56b848bf11510604c24fdfdf8657f144f290debc170aea00"
+        }
+      ]
+    },
+    {
+      "name": "type-is",
+      "version": "1.6.18",
+      "purl": "pkg:npm/type-is@1.6.18",
+      "type": "library",
+      "bom-ref": "pkg:npm/type-is@1.6.18",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "4e444aafdb144f1107f0c75fb8248fed58b3272cd134c8e3d89d9da3626bdcaca6e7df0955d124b2eccf4029e514f5b8932f50fa203e99af411a6d3a5d0072f2"
+        }
+      ]
+    },
+    {
+      "name": "utils-merge",
+      "version": "1.0.1",
+      "purl": "pkg:npm/utils-merge@1.0.1",
+      "type": "library",
+      "bom-ref": "pkg:npm/utils-merge@1.0.1",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "a4c653bc8913d5df93146bc33aaa1d39c971d105a49208ba4dda1af200bc7df18002acfda733d36560326dbb071e8103ff3b4cb64bff5686136324a1527f3584"
+        }
+      ]
+    },
+    {
+      "name": "vary",
+      "version": "1.1.2",
+      "purl": "pkg:npm/vary@1.1.2",
+      "type": "library",
+      "bom-ref": "pkg:npm/vary@1.1.2",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "04d19b58b7ddd1e50f69b8645d4566d23f2ebaf444c93879a2f45afddca8c3f06a01b649c82fb97d4f88cd03b39802b362a6110084a8461750af778867f3d7aa"
+        }
+      ]
+    },
+    {
+      "name": "debug",
+      "version": "3.1.0",
+      "purl": "pkg:npm/debug@3.1.0",
+      "type": "library",
+      "bom-ref": "pkg:npm/debug@3.1.0",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "397f17a8feffd5af5caa4c58c36c97b2cd797f6e8d2960690d741dd3fb8afca3ea7508716cf6bdf78867ce3704d95a90a43b257f9e7bdb770a3d43864a6318de"
+        }
+      ]
+    },
+    {
+      "name": "mime-types",
+      "version": "2.1.35",
+      "purl": "pkg:npm/mime-types@2.1.35",
+      "type": "library",
+      "bom-ref": "pkg:npm/mime-types@2.1.35",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "64363e6cf9b9cd34c5f98a42ac053d9cad148080983d3d10b53d4d65616fe2cfbe4cd91c815693d20ebee11dae238323423cf2b07075cf1b962f9d21cda7978b"
+        }
+      ]
+    },
+    {
+      "name": "negotiator",
+      "version": "0.6.3",
+      "purl": "pkg:npm/negotiator@0.6.3",
+      "type": "library",
+      "bom-ref": "pkg:npm/negotiator@0.6.3",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "f8452ca863cbb0cfa3ff37428598ec9d7e758385eb1c53885f07e70953c695093f9398226a470ab2ec4239b051bba0d29bda29c3f3bab2559b25d82140ce1b06"
+        }
+      ]
+    },
+    {
+      "name": "bytes",
+      "version": "3.1.0",
+      "purl": "pkg:npm/bytes@3.1.0",
+      "type": "library",
+      "bom-ref": "pkg:npm/bytes@3.1.0",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "cdab8b8eb7c21bec6fa326aa2e857c6cb5575cd182e09aa5c450aeb520d603a7c9ad3a3666ebcb613a99eda1c12d948c3a8a5bcf0bfc7fec19715cdf5532360e"
+        }
+      ]
+    },
+    {
+      "name": "http-errors",
+      "version": "1.7.2",
+      "purl": "pkg:npm/http-errors@1.7.2",
+      "type": "library",
+      "bom-ref": "pkg:npm/http-errors@1.7.2",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "b94401b771ff7122157dc87a8b512e3cdcbf62c4523940574d57d9fb247b6637b3dea8c1cfa8bdfa2e338cd6a8a9ca05548e25409e69960eb74ef19f4520c246"
+        }
+      ]
+    },
+    {
+      "name": "iconv-lite",
+      "version": "0.4.24",
+      "purl": "pkg:npm/iconv-lite@0.4.24",
+      "type": "library",
+      "bom-ref": "pkg:npm/iconv-lite@0.4.24",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "bf73179d901cbe7cb091350466898801cb657bb4575de79d391df5c3097b565ca85cee108bd6abbd27a73505a77b54dc4708422f51f02c8db56c4a9da63f3fac"
+        }
+      ]
+    },
+    {
+      "name": "raw-body",
+      "version": "2.4.0",
+      "purl": "pkg:npm/raw-body@2.4.0",
+      "type": "library",
+      "bom-ref": "pkg:npm/raw-body@2.4.0",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "e0ecfc0d423076fa1ae6a3097a5c62a738bf889222e343b9706575c0d629e61bd93fc64dd13fa388d90bd107a95ecf84b10f5727c8a9103a221fbd3249424fdd"
+        }
+      ]
+    },
+    {
+      "name": "ms",
+      "version": "2.0.0",
+      "purl": "pkg:npm/ms@2.0.0",
+      "type": "library",
+      "bom-ref": "pkg:npm/ms@2.0.0",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "4e9a7ad0fe885090d3b8eabfe59f1c76c93326e8dfc2a7ce4e4af02308fb211212a679099d3e92c89e0f08f9c63281630bd75d85a979295218b40b7dee2c74e4"
+        }
+      ]
+    },
+    {
+      "name": "unpipe",
+      "version": "1.0.0",
+      "purl": "pkg:npm/unpipe@1.0.0",
+      "type": "library",
+      "bom-ref": "pkg:npm/unpipe@1.0.0",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "a63cb66d8852b2e7f05a52b03dcfa5ddc37bfb0b8994aeaecf461d2443a54036e5ea3a3f6253e2e266fc6a0524542f0117b57c36ecdec8f36a464b00de1ced29"
+        }
+      ]
+    },
+    {
+      "name": "ee-first",
+      "version": "1.1.1",
+      "purl": "pkg:npm/ee-first@1.1.1",
+      "type": "library",
+      "bom-ref": "pkg:npm/ee-first@1.1.1",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "58cc26f4b851528f9651a44dfaf46e113a86f3d22066985548d91d16079beac4bf1383ab0c837bb78f0201ec121d773a0bc95e7c3f0a29faf9bd8eb56eb425a3"
+        }
+      ]
+    },
+    {
+      "name": "forwarded",
+      "version": "0.2.0",
+      "purl": "pkg:npm/forwarded@0.2.0",
+      "type": "library",
+      "bom-ref": "pkg:npm/forwarded@0.2.0",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "6ee446d1fa41b511d24c238049eea10f6e7cb44b9b16844b6f864d03a3713151cdc3680e7301e8f70c9a6e5ccccce039cfdc40f4bd4a36393f36de8c4fd698a3"
+        }
+      ]
+    },
+    {
+      "name": "ipaddr.js",
+      "version": "1.9.1",
+      "purl": "pkg:npm/ipaddr.js@1.9.1",
+      "type": "library",
+      "bom-ref": "pkg:npm/ipaddr.js@1.9.1",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "d0a23feb4ef1a31493a07ec68cdd457d26cba14d3e6ed4e2723b1049642587f859ca437c2a998c7fbb98c0f5b747e6a467a47fc35f199574870585e26143cede"
+        }
+      ]
+    },
+    {
+      "name": "destroy",
+      "version": "1.0.4",
+      "purl": "pkg:npm/destroy@1.0.4",
+      "type": "library",
+      "bom-ref": "pkg:npm/destroy@1.0.4",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "dcd7610ee1179dfba7ff3ef1f46384958e3d2e8a951e819272638ac26c61b12f0de58f99f0ac8f3c39da4b3a96818b7f8e2e26ab07d34b7e07b6b934ccf21756"
+        }
+      ]
+    },
+    {
+      "name": "http-errors",
+      "version": "1.7.3",
+      "purl": "pkg:npm/http-errors@1.7.3",
+      "type": "library",
+      "bom-ref": "pkg:npm/http-errors@1.7.3",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "6534d7d0c5abb10d9902103571e8c0c032f2705b1dec8ee756d9e44f73a5d1aaa875a296fb4093643435b81bf9c21a6d0a773c7bc1de45127146cd249a6fd07f"
+        }
+      ]
+    },
+    {
+      "name": "mime",
+      "version": "1.6.0",
+      "purl": "pkg:npm/mime@1.6.0",
+      "type": "library",
+      "bom-ref": "pkg:npm/mime@1.6.0",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "c74567f2ca48fb0b89d4ee92ee09db69083c3f187834d1dbeca4883661162a23c4e1128ea65be28e7f8d92662699180febc99cef48f611b793151b2bb306907a"
+        }
+      ]
+    },
+    {
+      "name": "ms",
+      "version": "2.1.1",
+      "purl": "pkg:npm/ms@2.1.1",
+      "type": "library",
+      "bom-ref": "pkg:npm/ms@2.1.1",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "b60a7e765e5c1a4dbcbad624b41b2b16a03b1ca82b8603ec83a67f11f856238825d47c2af01fc6998ff4a1767a9c5f210d57ac4bf1699d8683fe439685842fca"
+        }
+      ]
+    },
+    {
+      "name": "media-typer",
+      "version": "0.3.0",
+      "purl": "pkg:npm/media-typer@0.3.0",
+      "type": "library",
+      "bom-ref": "pkg:npm/media-typer@0.3.0",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "76afaa7a543d6a41e970e97f8145514f15483a4009d70477400bdbe11b158d2f285681630c64dcebbf702589949a49d41791f030b3a06f93be6b72b17d66a93d"
+        }
+      ]
+    },
+    {
+      "name": "mime-db",
+      "version": "1.52.0",
+      "purl": "pkg:npm/mime-db@1.52.0",
+      "type": "library",
+      "bom-ref": "pkg:npm/mime-db@1.52.0",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "b0f538b95edd625bed589c70c311c3d0fba285536213b4f201b439496c43081f66518bce82ba103b061040e28f27c0886c4fb51135653a82b5502da7537818be"
+        }
+      ]
+    },
+    {
+      "name": "inherits",
+      "version": "2.0.3",
+      "purl": "pkg:npm/inherits@2.0.3",
+      "type": "library",
+      "bom-ref": "pkg:npm/inherits@2.0.3",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "c74d0844d5cdcbade3c069099b33e2828c921db6aaa4dbb329b04e9b32be83639d66943dc3eb3108df95481de36bb20081ed8e3f6aa97f14e378d7328e65b5bb"
+        }
+      ]
+    },
+    {
+      "name": "toidentifier",
+      "version": "1.0.0",
+      "purl": "pkg:npm/toidentifier@1.0.0",
+      "type": "library",
+      "bom-ref": "pkg:npm/toidentifier@1.0.0",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "c9a387fcf93f5448415964e5848faa5f10c55e57a30c67108a9325cb175af67b61ba56b12d950d714a85c68929d2f7189efb5e2659f914d40346bc63dd871b57"
+        }
+      ]
+    },
+    {
+      "name": "safer-buffer",
+      "version": "2.1.2",
+      "purl": "pkg:npm/safer-buffer@2.1.2",
+      "type": "library",
+      "bom-ref": "pkg:npm/safer-buffer@2.1.2",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "619a372bcd920fb462ca2d04d4440fa232f3ee4a5ea6749023d2323db1c78355d75debdbe5d248eeda72376003c467106c71bbbdcc911e4d1c6f0a9c42b894b6"
+        }
+      ]
+    },
+    {
+      "name": "inherits",
+      "version": "2.0.4",
+      "purl": "pkg:npm/inherits@2.0.4",
+      "type": "library",
+      "bom-ref": "pkg:npm/inherits@2.0.4",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "93fbc6697e3f6256b75b3c8c0af4d039761e207bea38ab67a8176ecd31e9ce9419cc0b2428c859d8af849c189233dcc64a820578ca572b16b8758799210a9ec1"
+        }
+      ]
+    }
+  ],
+  "dependencies": [
+    {
+      "ref": "pkg:npm/mixed-deps-test@1.0.0",
+      "dependsOn": [
+        "pkg:npm/axios@0.19.0",
+        "pkg:npm/express@4.17.1",
+        "pkg:npm/minimist@1.2.0",
+        "pkg:npm/lodash@4.17.19"
+      ]
+    },
+    {
+      "ref": "pkg:npm/axios@0.19.0",
+      "dependsOn": [
+        "pkg:npm/follow-redirects@1.5.10",
+        "pkg:npm/is-buffer@2.0.5"
+      ]
+    },
+    {
+      "ref": "pkg:npm/express@4.17.1",
+      "dependsOn": [
+        "pkg:npm/accepts@1.3.8",
+        "pkg:npm/array-flatten@1.1.1",
+        "pkg:npm/body-parser@1.19.0",
+        "pkg:npm/content-disposition@0.5.3",
+        "pkg:npm/content-type@1.0.5",
+        "pkg:npm/cookie@0.4.0",
+        "pkg:npm/cookie-signature@1.0.6",
+        "pkg:npm/debug@2.6.9",
+        "pkg:npm/depd@1.1.2",
+        "pkg:npm/encodeurl@1.0.2",
+        "pkg:npm/escape-html@1.0.3",
+        "pkg:npm/etag@1.8.1",
+        "pkg:npm/finalhandler@1.1.2",
+        "pkg:npm/fresh@0.5.2",
+        "pkg:npm/merge-descriptors@1.0.1",
+        "pkg:npm/methods@1.1.2",
+        "pkg:npm/on-finished@2.3.0",
+        "pkg:npm/parseurl@1.3.3",
+        "pkg:npm/path-to-regexp@0.1.7",
+        "pkg:npm/proxy-addr@2.0.8",
+        "pkg:npm/qs@6.7.0",
+        "pkg:npm/range-parser@1.2.1",
+        "pkg:npm/safe-buffer@5.1.2",
+        "pkg:npm/send@0.17.1",
+        "pkg:npm/serve-static@1.14.1",
+        "pkg:npm/setprototypeof@1.1.1",
+        "pkg:npm/statuses@1.5.0",
+        "pkg:npm/type-is@1.6.18",
+        "pkg:npm/utils-merge@1.0.1",
+        "pkg:npm/vary@1.1.2"
+      ]
+    },
+    {
+      "ref": "pkg:npm/minimist@1.2.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/lodash@4.17.19",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/follow-redirects@1.5.10",
+      "dependsOn": [
+        "pkg:npm/debug@3.1.0"
+      ]
+    },
+    {
+      "ref": "pkg:npm/is-buffer@2.0.5",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/accepts@1.3.8",
+      "dependsOn": [
+        "pkg:npm/mime-types@2.1.35",
+        "pkg:npm/negotiator@0.6.3"
+      ]
+    },
+    {
+      "ref": "pkg:npm/array-flatten@1.1.1",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/body-parser@1.19.0",
+      "dependsOn": [
+        "pkg:npm/bytes@3.1.0",
+        "pkg:npm/content-type@1.0.5",
+        "pkg:npm/debug@2.6.9",
+        "pkg:npm/depd@1.1.2",
+        "pkg:npm/http-errors@1.7.2",
+        "pkg:npm/iconv-lite@0.4.24",
+        "pkg:npm/on-finished@2.3.0",
+        "pkg:npm/qs@6.7.0",
+        "pkg:npm/raw-body@2.4.0",
+        "pkg:npm/type-is@1.6.18"
+      ]
+    },
+    {
+      "ref": "pkg:npm/content-disposition@0.5.3",
+      "dependsOn": [
+        "pkg:npm/safe-buffer@5.1.2"
+      ]
+    },
+    {
+      "ref": "pkg:npm/content-type@1.0.5",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/cookie@0.4.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/cookie-signature@1.0.6",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/debug@2.6.9",
+      "dependsOn": [
+        "pkg:npm/ms@2.0.0"
+      ]
+    },
+    {
+      "ref": "pkg:npm/depd@1.1.2",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/encodeurl@1.0.2",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/escape-html@1.0.3",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/etag@1.8.1",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/finalhandler@1.1.2",
+      "dependsOn": [
+        "pkg:npm/debug@2.6.9",
+        "pkg:npm/encodeurl@1.0.2",
+        "pkg:npm/escape-html@1.0.3",
+        "pkg:npm/on-finished@2.3.0",
+        "pkg:npm/parseurl@1.3.3",
+        "pkg:npm/statuses@1.5.0",
+        "pkg:npm/unpipe@1.0.0"
+      ]
+    },
+    {
+      "ref": "pkg:npm/fresh@0.5.2",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/merge-descriptors@1.0.1",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/methods@1.1.2",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/on-finished@2.3.0",
+      "dependsOn": [
+        "pkg:npm/ee-first@1.1.1"
+      ]
+    },
+    {
+      "ref": "pkg:npm/parseurl@1.3.3",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/path-to-regexp@0.1.7",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/proxy-addr@2.0.8",
+      "dependsOn": [
+        "pkg:npm/forwarded@0.2.0",
+        "pkg:npm/ipaddr.js@1.9.1"
+      ]
+    },
+    {
+      "ref": "pkg:npm/qs@6.7.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/range-parser@1.2.1",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/safe-buffer@5.1.2",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/send@0.17.1",
+      "dependsOn": [
+        "pkg:npm/debug@2.6.9",
+        "pkg:npm/depd@1.1.2",
+        "pkg:npm/destroy@1.0.4",
+        "pkg:npm/encodeurl@1.0.2",
+        "pkg:npm/escape-html@1.0.3",
+        "pkg:npm/etag@1.8.1",
+        "pkg:npm/fresh@0.5.2",
+        "pkg:npm/http-errors@1.7.3",
+        "pkg:npm/mime@1.6.0",
+        "pkg:npm/ms@2.1.1",
+        "pkg:npm/on-finished@2.3.0",
+        "pkg:npm/range-parser@1.2.1",
+        "pkg:npm/statuses@1.5.0"
+      ]
+    },
+    {
+      "ref": "pkg:npm/serve-static@1.14.1",
+      "dependsOn": [
+        "pkg:npm/encodeurl@1.0.2",
+        "pkg:npm/escape-html@1.0.3",
+        "pkg:npm/parseurl@1.3.3",
+        "pkg:npm/send@0.17.1"
+      ]
+    },
+    {
+      "ref": "pkg:npm/setprototypeof@1.1.1",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/statuses@1.5.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/type-is@1.6.18",
+      "dependsOn": [
+        "pkg:npm/media-typer@0.3.0",
+        "pkg:npm/mime-types@2.1.35"
+      ]
+    },
+    {
+      "ref": "pkg:npm/utils-merge@1.0.1",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/vary@1.1.2",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/debug@3.1.0",
+      "dependsOn": [
+        "pkg:npm/ms@2.0.0"
+      ]
+    },
+    {
+      "ref": "pkg:npm/mime-types@2.1.35",
+      "dependsOn": [
+        "pkg:npm/mime-db@1.52.0"
+      ]
+    },
+    {
+      "ref": "pkg:npm/negotiator@0.6.3",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/bytes@3.1.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/http-errors@1.7.2",
+      "dependsOn": [
+        "pkg:npm/depd@1.1.2",
+        "pkg:npm/inherits@2.0.3",
+        "pkg:npm/setprototypeof@1.1.1",
+        "pkg:npm/statuses@1.5.0",
+        "pkg:npm/toidentifier@1.0.0"
+      ]
+    },
+    {
+      "ref": "pkg:npm/iconv-lite@0.4.24",
+      "dependsOn": [
+        "pkg:npm/safer-buffer@2.1.2"
+      ]
+    },
+    {
+      "ref": "pkg:npm/raw-body@2.4.0",
+      "dependsOn": [
+        "pkg:npm/bytes@3.1.0",
+        "pkg:npm/http-errors@1.7.2",
+        "pkg:npm/iconv-lite@0.4.24",
+        "pkg:npm/unpipe@1.0.0"
+      ]
+    },
+    {
+      "ref": "pkg:npm/ms@2.0.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/unpipe@1.0.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/ee-first@1.1.1",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/forwarded@0.2.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/ipaddr.js@1.9.1",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/destroy@1.0.4",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/http-errors@1.7.3",
+      "dependsOn": [
+        "pkg:npm/depd@1.1.2",
+        "pkg:npm/inherits@2.0.4",
+        "pkg:npm/setprototypeof@1.1.1",
+        "pkg:npm/statuses@1.5.0",
+        "pkg:npm/toidentifier@1.0.0"
+      ]
+    },
+    {
+      "ref": "pkg:npm/mime@1.6.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/ms@2.1.1",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/media-typer@0.3.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/mime-db@1.52.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/inherits@2.0.3",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/toidentifier@1.0.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/safer-buffer@2.1.2",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/inherits@2.0.4",
+      "dependsOn": []
+    }
+  ]
+}

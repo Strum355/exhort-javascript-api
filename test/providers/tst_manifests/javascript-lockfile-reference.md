@@ -10,6 +10,12 @@ The reference listings were captured from copies of the complete fixtures using:
 - Yarn 1.22.22: `yarn list --prod --frozen-lockfile --offline --json` with
   `--depth=Infinity` or `--depth=0`.
 - Yarn 4.9.3: `yarn info --all --json`, adding `--recursive` for stack analysis.
+- pnpm 10.14.0: `pnpm install --lockfile-only` to produce the `pnpm-lock.yaml`
+  (lockfileVersion 9) fixtures. The SBOMs are then read directly from the lockfile
+  — `packages` for integrity, `snapshots` for peer-contextual dependency edges,
+  `importers` for each workspace member — without invoking pnpm. lockfileVersion 6,
+  multi-document streams, and `file:`/`link:` local protocols are covered by the
+  focused parser tests in `test/javascript_lockfile.test.js`.
 
 Corepack auto-pinning and network access were disabled. Berry's install state was
 redirected outside the copied fixture. No installation was needed to capture the

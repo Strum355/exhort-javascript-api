@@ -1,0 +1,70 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.6",
+  "version": 1,
+  "metadata": {
+    "timestamp": "2023-08-07T00:00:00.000Z",
+    "component": {
+      "name": "member-a",
+      "version": "1.0.0",
+      "purl": "pkg:npm/member-a@1.0.0",
+      "type": "application",
+      "bom-ref": "pkg:npm/member-a@1.0.0"
+    },
+    "tools": {
+      "components": [
+        {
+          "type": "application",
+          "name": "trustify-da-javascript-client",
+          "version": "0.4.0"
+        }
+      ]
+    }
+  },
+  "components": [
+    {
+      "name": "axios",
+      "version": "0.21.1",
+      "purl": "pkg:npm/axios@0.21.1",
+      "type": "library",
+      "bom-ref": "pkg:npm/axios@0.21.1",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "74a422447c460fd3cf44850d216bd984f4cfa65d6b7ff3b14d82aca8a5038c1c18ca54ef57b4a348725bf6b6ad7f2ccceb009d2c23982f3b3bdeaa60e5ce2218"
+        }
+      ]
+    },
+    {
+      "name": "follow-redirects",
+      "version": "1.16.1",
+      "purl": "pkg:npm/follow-redirects@1.16.1",
+      "type": "library",
+      "bom-ref": "pkg:npm/follow-redirects@1.16.1",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "14dbc51b3a0c2d6984e988fdb296ffce377bca23421e2016f7f4e0f425eb43cc2ebb7d87b6524ec163b5d4e25a7e5e457d8dc3c53750d2f8f8db353592fbf98e"
+        }
+      ]
+    }
+  ],
+  "dependencies": [
+    {
+      "ref": "pkg:npm/member-a@1.0.0",
+      "dependsOn": [
+        "pkg:npm/axios@0.21.1"
+      ]
+    },
+    {
+      "ref": "pkg:npm/axios@0.21.1",
+      "dependsOn": [
+        "pkg:npm/follow-redirects@1.16.1"
+      ]
+    },
+    {
+      "ref": "pkg:npm/follow-redirects@1.16.1",
+      "dependsOn": []
+    }
+  ]
+}
