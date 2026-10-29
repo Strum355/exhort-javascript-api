@@ -1038,19 +1038,26 @@ jackson-databind = { module = "com.fasterxml.jackson.core:jackson-databind", ver
 			}
 		})
 
-		/** Percent-encoded purls are decoded for exclude matching (case-insensitive type). */
-		test('percent-encoded purls match decoded exclude patterns', async () => {
+		/** Percent-encoded purl components are decoded before exclude matching. */
+		test('percent-encoded dep purl matches decoded exclude pattern', async () => {
 			const { dir, cleanup } = createTempDir({ 'pom.xml': EXCLUDE_POM })
 			try {
 				const pomPath = path.join(dir, 'pom.xml')
 				matchStub.returns({ provideStack: stub().resolves({ content: '{}', contentType: 'application/json', ecosystem: 'maven' }) })
-				requestStackStub.resolves(buildMultiDepReport([COMMONS_TEXT, JACKSON_CORE]))
+				// The analysis report uses a percent-encoded groupId in the purl
+				requestStackStub.resolves(buildMultiDepReport([
+					{ depRef: 'pkg:maven/org.apache.commons/commons-text@1.9', fixedIn: ['pkg:maven/org.apache.commons/commons-text@1.10.0'], issueId: 'CVE-2022-42889' },
+					JACKSON_CORE,
+				]))
 
-				// Exclude with uppercase type — should still match (case-insensitive)
-				const result = await runRemediation(pomPath, { dryRun: true, exclude: ['pkg:MAVEN/org.apache.commons/commons-text'] })
+				// Exclude pattern uses percent-encoded groupId segment — should match
+				// the decoded canonical purl via normalizeExcludePattern
+				const withEncoded = await runRemediation(pomPath, { dryRun: true, exclude: ['pkg:maven/org.apache.commons/commons%2Dtext'] })
+				// Same exclude with decoded form
+				const withDecoded = await runRemediation(pomPath, { dryRun: true, exclude: ['pkg:maven/org.apache.commons/commons-text'] })
 
-				const artifacts = result.remediations.map(r => r.artifactId)
-				expect(artifacts).to.deep.equal(['jackson-core'])
+				expect(withEncoded.remediations.map(r => r.artifactId)).to.deep.equal(['jackson-core'])
+				expect(withDecoded.remediations.map(r => r.artifactId)).to.deep.equal(['jackson-core'])
 			} finally {
 				cleanup()
 			}
