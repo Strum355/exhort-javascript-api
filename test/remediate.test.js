@@ -1132,7 +1132,6 @@ jackson-databind = { module = "com.fasterxml.jackson.core:jackson-databind", ver
 	})
 
 	suite('exclude matcher — unit tests', () => {
-		let normalizeExcludePattern
 		let compileExcludeMatcher
 
 		setup(async () => {
@@ -1141,7 +1140,6 @@ jackson-databind = { module = "com.fasterxml.jackson.core:jackson-databind", ver
 				'../src/provider.js': { match: stub(), availableProviders: [] },
 				'../src/index.js': { selectTrustifyDABackend: () => 'https://da.example.com' },
 			})
-			normalizeExcludePattern = mod.normalizeExcludePattern
 			compileExcludeMatcher = mod.compileExcludeMatcher
 		})
 
