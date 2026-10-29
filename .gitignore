@@ -11,3 +11,4 @@ target
 .npmrc
 src/providers/*.wasm
 *.egg-info
+*.m2
