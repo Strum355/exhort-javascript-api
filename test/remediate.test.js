@@ -202,10 +202,11 @@ suite('remediate — runRemediation', () => {
 				const before = fs.readFileSync(pomPath, 'utf-8')
 				const result = await runRemediation(pomPath, {})
 
-				// Transitive dep is dropped (updater can't locate it).
 				expect(result.remediations).to.have.lengthOf(0)
 				expect(result.groups).to.have.lengthOf(0)
 				expect(result.appliedFiles).to.deep.equal([])
+				expect(result.skipped).to.have.lengthOf(1)
+				expect(result.skipped[0].reason).to.equal('Dependency not directly declared in the manifest')
 				expect(fs.readFileSync(pomPath, 'utf-8')).to.equal(before)
 			} finally {
 				cleanup()
@@ -474,8 +475,8 @@ suite('remediate — runRemediation', () => {
 				expect(group.appliedVersion).to.equal('1.10.0')
 				expect(group.divergent).to.equal(false)
 				expect(group.remediations).to.have.lengthOf(1)
-				expect(group.content.path).to.equal(pomPath)
-				expect(group.content.after).to.include('1.10.0')
+				expect(group.edit.path).to.equal(pomPath)
+				expect(group.edit.after).to.include('1.10.0')
 			} finally {
 				cleanup()
 			}
@@ -503,9 +504,9 @@ suite('remediate — runRemediation', () => {
 				expect(jacksonGroup.divergent).to.equal(false)
 
 				// commons-text's isolated content bumps ONLY commons-text
-				expect(textGroup.content.after).to.include('1.10.0')
-				expect(textGroup.content.after).to.include('2.14.0')
-				expect(textGroup.content.after).to.not.include('2.15.0')
+				expect(textGroup.edit.after).to.include('1.10.0')
+				expect(textGroup.edit.after).to.include('2.14.0')
+				expect(textGroup.edit.after).to.not.include('2.15.0')
 
 				expect(fs.readFileSync(pomPath, 'utf-8')).to.equal(MULTI_POM)
 			} finally {
@@ -532,7 +533,7 @@ suite('remediate — runRemediation', () => {
 				expect(group.appliedVersion).to.equal('1.10.0')
 				expect(group.remediations).to.have.lengthOf(2)
 				expect(group.divergent).to.equal(false)
-				expect(group.content.after).to.include('<commons.version>1.10.0</commons.version>')
+				expect(group.edit.after).to.include('<commons.version>1.10.0</commons.version>')
 			} finally {
 				cleanup()
 			}
@@ -555,7 +556,7 @@ suite('remediate — runRemediation', () => {
 				const group = result.groups[0]
 				expect(group.appliedVersion).to.equal('1.12.0')
 				expect(group.divergent).to.equal(true)
-				expect(group.content.after).to.include('<commons.version>1.12.0</commons.version>')
+				expect(group.edit.after).to.include('<commons.version>1.12.0</commons.version>')
 
 				// Individual remediations retain their original fixedInVersion
 				const text = group.remediations.find(r => r.artifactId === 'commons-text')
@@ -584,7 +585,7 @@ suite('remediate — runRemediation', () => {
 
 				expect(result.groups[0].appliedVersion).to.equal('1.10.0')
 				expect(result.groups[0].divergent).to.equal(true)
-				expect(result.groups[0].content.after).to.include('<commons.version>1.10.0</commons.version>')
+				expect(result.groups[0].edit.after).to.include('<commons.version>1.10.0</commons.version>')
 			} finally {
 				cleanup()
 			}
@@ -611,8 +612,8 @@ suite('remediate — runRemediation', () => {
 			}
 		})
 
-		/** Transitive deps (not in manifest) are dropped from both groups and remediations. */
-		test('drops transitive deps absent from the manifest', async () => {
+		/** Transitive deps (not in manifest) are excluded from groups and reported in skipped. */
+		test('transitive deps go to skipped, not groups', async () => {
 			const { dir, cleanup } = createTempDir({ 'pom.xml': SAMPLE_POM })
 			try {
 				const pomPath = path.join(dir, 'pom.xml')
@@ -627,6 +628,12 @@ suite('remediate — runRemediation', () => {
 				expect(result.groups).to.have.lengthOf(1)
 				expect(result.remediations).to.have.lengthOf(1)
 				expect(result.remediations[0].artifactId).to.equal('commons-text')
+				expect(result.skipped).to.deep.include({
+					groupId: 'com.transitive',
+					artifactId: 'deep-lib',
+					newVersion: '1.1',
+					reason: 'Dependency not directly declared in the manifest',
+				})
 			} finally {
 				cleanup()
 			}
@@ -649,8 +656,8 @@ suite('remediate — runRemediation', () => {
 				const result = await runRemediation(dir, { dryRun: true })
 
 				expect(result.groups).to.have.lengthOf(2)
-				const pomGroup = result.groups.find(g => g.content.path.endsWith('pom.xml'))
-				const tomlGroup = result.groups.find(g => g.content.path.endsWith('libs.versions.toml'))
+				const pomGroup = result.groups.find(g => g.edit.path.endsWith('pom.xml'))
+				const tomlGroup = result.groups.find(g => g.edit.path.endsWith('libs.versions.toml'))
 				expect(pomGroup).to.not.be.undefined
 				expect(tomlGroup).to.not.be.undefined
 				expect(pomGroup.changeKey).to.not.equal(tomlGroup.changeKey)
@@ -674,6 +681,69 @@ suite('remediate — runRemediation', () => {
 
 				const fromGroups = result.groups.flatMap(g => g.remediations)
 				expect(result.remediations).to.deep.equal(fromGroups)
+			} finally {
+				cleanup()
+			}
+		})
+
+		/** TOML: two deps sharing a version.ref with conflicting targets resolve correctly. */
+		test('TOML shared version.ref with conflicting targets resolves to highest', async () => {
+			const SHARED_TOML = `[versions]
+jackson = "2.14.0"
+
+[libraries]
+jackson-core = { module = "com.fasterxml.jackson.core:jackson-core", version.ref = "jackson" }
+jackson-databind = { module = "com.fasterxml.jackson.core:jackson-databind", version.ref = "jackson" }
+`
+			const { dir, cleanup } = createTempDir({ 'libs.versions.toml': SHARED_TOML })
+			try {
+				const tomlPath = path.join(dir, 'libs.versions.toml')
+				matchStub.returns({ provideStack: stub().resolves({ content: '{}', contentType: 'application/json', ecosystem: 'gradle' }) })
+				requestStackStub.resolves(buildMultiDepReport([
+					{ depRef: 'pkg:maven/com.fasterxml.jackson.core/jackson-core@2.14.0', fixedIn: ['pkg:maven/com.fasterxml.jackson.core/jackson-core@2.15.0'], issueId: 'CVE-2020-1000' },
+					{ depRef: 'pkg:maven/com.fasterxml.jackson.core/jackson-databind@2.14.0', fixedIn: ['pkg:maven/com.fasterxml.jackson.core/jackson-databind@2.17.0'], issueId: 'CVE-2020-2000' },
+				]))
+
+				const result = await runRemediation(tomlPath, { dryRun: true })
+
+				expect(result.groups).to.have.lengthOf(1)
+				const group = result.groups[0]
+				expect(group.appliedVersion).to.equal('2.17.0')
+				expect(group.divergent).to.equal(true)
+				expect(group.edit.after).to.include('jackson = "2.17.0"')
+
+				const core = group.remediations.find(r => r.artifactId === 'jackson-core')
+				const databind = group.remediations.find(r => r.artifactId === 'jackson-databind')
+				expect(core.fixedInVersion).to.equal('2.15.0')
+				expect(databind.fixedInVersion).to.equal('2.17.0')
+			} finally {
+				cleanup()
+			}
+		})
+
+		/** TOML: conflicting targets with apply mode writes the resolved version to disk. */
+		test('TOML conflicting targets writes resolved version to disk', async () => {
+			const SHARED_TOML = `[versions]
+jackson = "2.14.0"
+
+[libraries]
+jackson-core = { module = "com.fasterxml.jackson.core:jackson-core", version.ref = "jackson" }
+jackson-databind = { module = "com.fasterxml.jackson.core:jackson-databind", version.ref = "jackson" }
+`
+			const { dir, cleanup } = createTempDir({ 'libs.versions.toml': SHARED_TOML })
+			try {
+				const tomlPath = path.join(dir, 'libs.versions.toml')
+				matchStub.returns({ provideStack: stub().resolves({ content: '{}', contentType: 'application/json', ecosystem: 'gradle' }) })
+				requestStackStub.resolves(buildMultiDepReport([
+					{ depRef: 'pkg:maven/com.fasterxml.jackson.core/jackson-core@2.14.0', fixedIn: ['pkg:maven/com.fasterxml.jackson.core/jackson-core@2.15.0'], issueId: 'CVE-2020-1000' },
+					{ depRef: 'pkg:maven/com.fasterxml.jackson.core/jackson-databind@2.14.0', fixedIn: ['pkg:maven/com.fasterxml.jackson.core/jackson-databind@2.17.0'], issueId: 'CVE-2020-2000' },
+				]))
+
+				const result = await runRemediation(tomlPath, {})
+
+				expect(result.appliedFiles).to.deep.equal([tomlPath])
+				const written = fs.readFileSync(tomlPath, 'utf-8')
+				expect(written).to.include('jackson = "2.17.0"')
 			} finally {
 				cleanup()
 			}
@@ -705,7 +775,7 @@ jackson-databind = { module = "com.fasterxml.jackson.core:jackson-databind", ver
 				expect(group.appliedVersion).to.equal('2.15.0')
 				expect(group.remediations).to.have.lengthOf(2)
 				expect(group.divergent).to.equal(false)
-				expect(group.content.after).to.include('2.15.0')
+				expect(group.edit.after).to.include('2.15.0')
 			} finally {
 				cleanup()
 			}
@@ -1038,22 +1108,19 @@ jackson-databind = { module = "com.fasterxml.jackson.core:jackson-databind", ver
 			}
 		})
 
-		/** Percent-encoded purl components are decoded before exclude matching. */
-		test('percent-encoded dep purl matches decoded exclude pattern', async () => {
+		/** Percent-encoded artifactId in the exclude pattern is decoded before matching. */
+		test('percent-encoded exclude pattern matches decoded purl', async () => {
 			const { dir, cleanup } = createTempDir({ 'pom.xml': EXCLUDE_POM })
 			try {
 				const pomPath = path.join(dir, 'pom.xml')
 				matchStub.returns({ provideStack: stub().resolves({ content: '{}', contentType: 'application/json', ecosystem: 'maven' }) })
-				// The analysis report uses a percent-encoded groupId in the purl
 				requestStackStub.resolves(buildMultiDepReport([
 					{ depRef: 'pkg:maven/org.apache.commons/commons-text@1.9', fixedIn: ['pkg:maven/org.apache.commons/commons-text@1.10.0'], issueId: 'CVE-2022-42889' },
 					JACKSON_CORE,
 				]))
 
-				// Exclude pattern uses percent-encoded groupId segment — should match
-				// the decoded canonical purl via normalizeExcludePattern
+				// Exclude pattern uses percent-encoded artifactId (%2D = hyphen)
 				const withEncoded = await runRemediation(pomPath, { dryRun: true, exclude: ['pkg:maven/org.apache.commons/commons%2Dtext'] })
-				// Same exclude with decoded form
 				const withDecoded = await runRemediation(pomPath, { dryRun: true, exclude: ['pkg:maven/org.apache.commons/commons-text'] })
 
 				expect(withEncoded.remediations.map(r => r.artifactId)).to.deep.equal(['jackson-core'])
@@ -1061,6 +1128,57 @@ jackson-databind = { module = "com.fasterxml.jackson.core:jackson-databind", ver
 			} finally {
 				cleanup()
 			}
+		})
+	})
+
+	suite('exclude matcher — unit tests', () => {
+		let normalizeExcludePattern
+		let compileExcludeMatcher
+
+		setup(async () => {
+			const mod = await esmock('../src/remediate.js', {
+				'../src/analysis.js': { default: { requestStack: stub() } },
+				'../src/provider.js': { match: stub(), availableProviders: [] },
+				'../src/index.js': { selectTrustifyDABackend: () => 'https://da.example.com' },
+			})
+			normalizeExcludePattern = mod.normalizeExcludePattern
+			compileExcludeMatcher = mod.compileExcludeMatcher
+		})
+
+		test('decodes percent-encoded npm scope in pattern', () => {
+			const matcher = compileExcludeMatcher('pkg:npm/%40babel/traverse')
+			expect(matcher('pkg:npm/@babel/traverse')).to.equal(true)
+			expect(matcher('pkg:npm/@babel/core')).to.equal(false)
+		})
+
+		test('** crosses segments, * does not', () => {
+			const globstar = compileExcludeMatcher('pkg:maven/**')
+			const star = compileExcludeMatcher('pkg:maven/*')
+			expect(globstar('pkg:maven/com.example/foo')).to.equal(true)
+			expect(star('pkg:maven/com.example/foo')).to.equal(false)
+			expect(star('pkg:maven/single-segment')).to.equal(true)
+		})
+
+		test('type is case-insensitive', () => {
+			const matcher = compileExcludeMatcher('pkg:NPM/@scope/name')
+			expect(matcher('pkg:npm/@scope/name')).to.equal(true)
+		})
+	})
+
+	suite('compareVersions — prerelease behavior', () => {
+		let compareVersions
+
+		setup(async () => {
+			const mod = await import('../src/remediation.js')
+			compareVersions = mod.compareVersions
+		})
+
+		test('prerelease sorts above its stable release (current behavior)', () => {
+			expect(compareVersions('2.0.0-rc1', '2.0.0')).to.be.greaterThan(0)
+		})
+
+		test('higher stable version sorts above lower prerelease', () => {
+			expect(compareVersions('2.1.0', '2.0.0-rc1')).to.be.greaterThan(0)
 		})
 	})
 })

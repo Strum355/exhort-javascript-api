@@ -63,7 +63,7 @@ const SKIP_DIRS = new Set(['node_modules', '.git'])
  *   changeKey: string,
  *   appliedVersion: string,
  *   remediations: AppliedRemediation[],
- *   content: { path: string, after: string },
+ *   edit: { path: string, after: string },
  *   divergent: boolean,
  * }} RemediationGroup
  */
@@ -122,7 +122,7 @@ function canonicalDepPurl(purl) {
  * @param {string} pattern
  * @returns {string}
  */
-function normalizeExcludePattern(pattern) {
+export function normalizeExcludePattern(pattern) {
 	const withoutScheme = pattern.replace(/^pkg:/i, '')
 	const slash = withoutScheme.indexOf('/')
 	if (slash === -1) {
@@ -150,7 +150,7 @@ function normalizeExcludePattern(pattern) {
  * @param {string} pattern
  * @returns {(canonicalPurl: string) => boolean}
  */
-function compileExcludeMatcher(pattern) {
+export function compileExcludeMatcher(pattern) {
 	const normalized = normalizeExcludePattern(pattern)
 	return canonicalPurl => micromatch.isMatch(canonicalPurl, normalized)
 }
@@ -329,6 +329,12 @@ export async function runRemediation(targetPath, options = {}) {
 				newVersion: remediation.fixedInVersion,
 			}])
 			if (isolated.applied.length === 0) {
+				allSkipped.push({
+					groupId: remediation.groupId,
+					artifactId: remediation.artifactId,
+					newVersion: remediation.fixedInVersion,
+					reason: 'Dependency not directly declared in the manifest',
+				})
 				continue
 			}
 			const key = manifestType.changeKey(manifestPath, isolated.applied[0])
@@ -368,9 +374,15 @@ export async function runRemediation(targetPath, options = {}) {
 		const allChanges = []
 		for (const [changeKey, members] of groups) {
 			const uniqueVersions = [...new Set(members.map(r => r.fixedInVersion))]
-			const appliedVersion = uniqueVersions.length === 1
-				? uniqueVersions[0]
-				: resolveConflict(uniqueVersions, conflictResolution)
+			let appliedVersion
+			if (uniqueVersions.length === 1) {
+				appliedVersion = uniqueVersions[0]
+			} else {
+				appliedVersion = resolveConflict(uniqueVersions, conflictResolution)
+				if (!uniqueVersions.includes(appliedVersion)) {
+					throw new Error(`conflictResolution returned '${appliedVersion}', which is not one of the candidates: ${uniqueVersions.join(', ')}`)
+				}
+			}
 
 			const changes = members.map(r => ({
 				groupId: r.groupId, artifactId: r.artifactId, newVersion: appliedVersion,
@@ -381,7 +393,7 @@ export async function runRemediation(targetPath, options = {}) {
 				changeKey,
 				appliedVersion,
 				remediations: members,
-				content: { path: manifestPath, after: result.content },
+				edit: { path: manifestPath, after: result.content },
 				divergent: members.some(r => r.fixedInVersion !== appliedVersion),
 			})
 
