@@ -75,15 +75,15 @@
 			]
 		},
 		{
-			"name": "importlib-metadata",
-			"version": "8.5.0",
-			"purl": "pkg:pypi/importlib-metadata@8.5.0",
+			"name": "zipp",
+			"version": "3.20.2",
+			"purl": "pkg:pypi/zipp@3.20.2",
 			"type": "library",
-			"bom-ref": "pkg:pypi/importlib-metadata@8.5.0",
+			"bom-ref": "pkg:pypi/zipp@3.20.2",
 			"hashes": [
 				{
 					"alg": "SHA-256",
-					"content": "71522656f0abace1d072b9e5481a48f07c138e00f079c38c8f883823f9c26bd7"
+					"content": "bc9eb26f4506fda01b81bcde0ca78103b6e62f991b381fec825435c836edbc29"
 				}
 			]
 		},
@@ -123,19 +123,6 @@
 				{
 					"alg": "SHA-256",
 					"content": "a8dd59d4de28ca70471a34cba79bed5f7ef2e036a76b3ab0835474246eb41f8d"
-				}
-			]
-		},
-		{
-			"name": "zipp",
-			"version": "3.20.2",
-			"purl": "pkg:pypi/zipp@3.20.2",
-			"type": "library",
-			"bom-ref": "pkg:pypi/zipp@3.20.2",
-			"hashes": [
-				{
-					"alg": "SHA-256",
-					"content": "bc9eb26f4506fda01b81bcde0ca78103b6e62f991b381fec825435c836edbc29"
 				}
 			]
 		},
@@ -223,7 +210,7 @@
 			"dependsOn": [
 				"pkg:pypi/blinker@1.8.2",
 				"pkg:pypi/click@8.1.8",
-				"pkg:pypi/importlib-metadata@8.5.0",
+				"pkg:pypi/zipp@3.20.2",
 				"pkg:pypi/itsdangerous@2.2.0",
 				"pkg:pypi/jinja2@3.1.6",
 				"pkg:pypi/werkzeug@3.0.6"
@@ -243,10 +230,8 @@
 			"dependsOn": []
 		},
 		{
-			"ref": "pkg:pypi/importlib-metadata@8.5.0",
-			"dependsOn": [
-				"pkg:pypi/zipp@3.20.2"
-			]
+			"ref": "pkg:pypi/zipp@3.20.2",
+			"dependsOn": []
 		},
 		{
 			"ref": "pkg:pypi/itsdangerous@2.2.0",
@@ -263,10 +248,6 @@
 			"dependsOn": [
 				"pkg:pypi/markupsafe@2.1.5"
 			]
-		},
-		{
-			"ref": "pkg:pypi/zipp@3.20.2",
-			"dependsOn": []
 		},
 		{
 			"ref": "pkg:pypi/markupsafe@2.1.5",

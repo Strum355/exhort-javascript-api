@@ -54,7 +54,7 @@ jobs:
       - name: setup Python
         uses: actions/setup-python@v7
         with:
-          python-version: '3.9'
+          python-version: '3.13'
           cache: 'pip'
 
       - name: get Python location
