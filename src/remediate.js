@@ -6,7 +6,7 @@ import { PackageURL } from 'packageurl-js'
 
 import analysis from './analysis.js'
 import { availableProviders, match } from './provider.js'
-import { extractRemediations } from './remediation.js'
+import { extractRemediations, compareVersions } from './remediation.js'
 import { mavenChangeKey, mavenDepsForEditSite, updateMavenVersions } from './updaters/maven_updater.js'
 import { tomlChangeKey, tomlDepsForEditSite, updateTomlVersions } from './updaters/toml_updater.js'
 
@@ -49,25 +49,23 @@ const SKIP_DIRS = new Set(['node_modules', '.git'])
  */
 
 /**
- * An isolated, single-dependency edit to one manifest file.
- * - `after` is the *original* manifest content with only this dependency's fix applied, so a caller
- *   can create an isolated commit by writing `after` to `path` on a branch cut from the base.
- * - `changeKey` is a stable identifier for the underlying edit site. Two remediations that share a
- *   `changeKey` are inseparable (e.g. two Maven deps whose versions resolve to the same `${property}`,
- *   or two Gradle libraries sharing one `version.ref`) and MUST land in the same commit/PR — the
- *   caller should union their CVEs/advisories.
- * @typedef {{ path: string, after: string, changeKey: string }} DependencyFix
+ * A remediation grounded in the scanned workspace: the canonical
+ * {@link import('./remediation.js').Remediation} base as produced by `extractRemediations`, enriched
+ * by `runRemediation` with the originating manifest path(s) in `files` (always present).
+ * @typedef {import('./remediation.js').Remediation & {
+ *   files: string[],
+ * }} AppliedRemediation
  */
 
 /**
- * A remediation grounded in the scanned workspace: the canonical
- * {@link import('./remediation.js').Remediation} base as produced by `extractRemediations`, enriched
- * by `runRemediation` with the originating manifest path(s) in `files` (always present) and,
- * optionally, the isolated per-dependency edits in `changes`.
- * @typedef {import('./remediation.js').Remediation & {
- *   files: string[],
- *   changes?: DependencyFix[]
- * }} AppliedRemediation
+ * One group of inseparable remediations sharing the same edit site (changeKey).
+ * @typedef {{
+ *   changeKey: string,
+ *   appliedVersion: string,
+ *   remediations: AppliedRemediation[],
+ *   edit: { path: string, after: string },
+ *   divergent: boolean,
+ * }} RemediationGroup
  */
 
 /** @type {ManifestType[]} */
@@ -124,7 +122,7 @@ function canonicalDepPurl(purl) {
  * @param {string} pattern
  * @returns {string}
  */
-function normalizeExcludePattern(pattern) {
+export function normalizeExcludePattern(pattern) {
 	const withoutScheme = pattern.replace(/^pkg:/i, '')
 	const slash = withoutScheme.indexOf('/')
 	if (slash === -1) {
@@ -152,7 +150,7 @@ function normalizeExcludePattern(pattern) {
  * @param {string} pattern
  * @returns {(canonicalPurl: string) => boolean}
  */
-function compileExcludeMatcher(pattern) {
+export function compileExcludeMatcher(pattern) {
 	const normalized = normalizeExcludePattern(pattern)
 	return canonicalPurl => micromatch.isMatch(canonicalPurl, normalized)
 }
@@ -206,20 +204,34 @@ export function findManifests(targetPath) {
 }
 
 /**
+ * Resolves a version conflict among candidates. Default: highest version wins.
+ * @param {string[]} versions
+ * @param {((versions: string[]) => string)} [resolve]
+ * @returns {string}
+ */
+function resolveConflict(versions, resolve) {
+	if (resolve) {
+		return resolve(versions)
+	}
+	return versions.sort((a, b) => compareVersions(b, a))[0]
+}
+
+/**
  * Options accepted by {@link runRemediation}. See the per-field docs on the function for details.
  * @typedef {{
  *   dryRun?: boolean,
  *   providers?: string,
  *   sources?: string,
  *   backendUrl?: string,
- *   perDependencyChanges?: boolean,
+ *   conflictResolution?: (versions: string[]) => string,
  *   exclude?: string[]
  * }} RunRemediationOptions
  */
 
 /**
  * Orchestrates the full remediation pipeline for a single manifest or directory:
- * discover manifests → scan via DA backend → extract remediations → apply or preview.
+ * discover manifests → scan via DA backend → extract remediations → group by edit site →
+ * resolve conflicts → produce isolated and combined content → optionally write to disk.
  *
  * @param {string} targetPath - path to a manifest file or directory
  * @param {RunRemediationOptions} [options]
@@ -227,9 +239,8 @@ export function findManifests(targetPath) {
  * @param {string} [options.providers] - comma-separated provider list
  * @param {string} [options.sources] - comma-separated source list
  * @param {string} [options.backendUrl] - Trustify DA backend URL
- * @param {boolean} [options.perDependencyChanges=false] - when true, each remediation is populated with
- *   a `changes` array describing the isolated, single-dependency edit (see {@link DependencyFix}). This lets
- *   callers create one commit/PR per dependency without attributing diff hunks themselves.
+ * @param {function} [options.conflictResolution] - function `(versions: string[]) => string` to resolve
+ *   version conflicts within a group. Default picks the highest version.
  * @param {string[]} [options.exclude=[]] - version-less purl glob patterns, e.g. `pkg:maven/com.example/legacy-lib`
  *   or `pkg:maven/com.example/*` to exclude a group. Matched with micromatch, so standard glob semantics apply:
  *   `*` matches within a `/`-segment and `**` crosses segments (`pkg:maven/**` excludes the whole ecosystem).
@@ -237,24 +248,20 @@ export function findManifests(targetPath) {
  *   case-insensitively and components are percent-decoded, so `pkg:npm/@scope/*` and `pkg:npm/%40scope/*` both
  *   match `pkg:npm/@scope/x`. Matching remediations are filtered out before being applied or returned. Wired
  *   from `.trustify-da.yml`'s `remediation.exclude` via the CLI `--exclude` flag.
- * @returns {Promise<{exitCode: number, remediations: AppliedRemediation[], manifests: string[], appliedFiles: string[], skipped: Array<{groupId: string, artifactId: string, newVersion: string, reason: string}>}>}
- *   exitCode is 2 for a dry-run that found remediations (nothing written), 0 otherwise. `remediations`
- *   is the structured, per-manifest list of applicable updates — each entry carries the originating
- *   manifest path(s) in `files` so callers can group and create per-dependency changes. `appliedFiles`
- *   lists only the manifests actually written to disk (empty on a dry-run), so callers can report a
- *   truthful "updated N files" count without conflating "had remediations" with "was written". `skipped`
- *   lists remediations that were dropped because they share a version edit site with an excluded dependency.
+ * @returns {Promise<{exitCode: number, groups: RemediationGroup[], remediations: AppliedRemediation[], manifests: string[], appliedFiles: string[], skipped: Array<{groupId: string, artifactId: string, newVersion: string, reason: string}>}>}
+ *   exitCode is 2 for a dry-run that found remediations (nothing written), 0 otherwise. `groups` is the
+ *   primary structure — each group represents one inseparable edit site. `remediations` is a flat convenience
+ *   accessor (`groups.flatMap(g => g.remediations)`). `appliedFiles` lists only the manifests actually written
+ *   to disk (empty on a dry-run).
  */
 export async function runRemediation(targetPath, options = {}) {
-	const { dryRun = false, providers, sources, perDependencyChanges = false, backendUrl, exclude = [] } = options
+	const { dryRun = false, providers, sources, conflictResolution, backendUrl, exclude = [] } = options
 
-	// Compile exclude patterns once up front; each becomes a predicate over a dependency's
-	// canonical, version-less purl (see canonicalDepPurl / compileExcludeMatcher).
 	const excludeMatchers = exclude.map(compileExcludeMatcher)
 
 	const manifestPaths = findManifests(targetPath)
 	if (manifestPaths.length === 0) {
-		return { exitCode: 0, remediations: [], manifests: manifestPaths, appliedFiles: [], skipped: [] }
+		return { exitCode: 0, groups: [], remediations: [], manifests: manifestPaths, appliedFiles: [], skipped: [] }
 	}
 
 	const opts = {}
@@ -269,7 +276,8 @@ export async function runRemediation(targetPath, options = {}) {
 	}
 
 	const url = selectTrustifyDABackend(opts)
-	const allRemediations = []
+	/** @type {RemediationGroup[]} */
+	const allGroups = []
 	const appliedFiles = []
 	/** @type {Array<{groupId: string, artifactId: string, newVersion: string, reason: string}>} */
 	const allSkipped = []
@@ -293,9 +301,6 @@ export async function runRemediation(targetPath, options = {}) {
 			providerPriority: providers ? providers.split(',').map(p => p.trim()).filter(Boolean) : undefined,
 		})
 
-		// Drop remediations whose dependency purl matches an exclude pattern, so callers
-		// (and .trustify-da.yml via the CLI) can opt specific dependencies — or whole
-		// groups via `*` wildcards — out of remediation entirely.
 		let remediations = excludeMatchers.length === 0
 			? extracted
 			: extracted.filter(r => {
@@ -307,106 +312,108 @@ export async function runRemediation(targetPath, options = {}) {
 			continue
 		}
 
-		const needsContent = excludeMatchers.length > 0 || perDependencyChanges || !dryRun
-		const originalContent = needsContent ? fs.readFileSync(manifestPath, 'utf-8') : null
+		const originalContent = fs.readFileSync(manifestPath, 'utf-8')
+		const editSiteMap = excludeMatchers.length > 0
+			? manifestType.depsForEditSite(originalContent, manifestPath)
+			: null
 
-		// Block retained remediations whose edit site (Maven ${property}, Gradle
-		// version.ref) also contains a dependency matching an exclude pattern —
-		// bumping the shared site would upgrade the excluded dep as a side effect.
-		if (excludeMatchers.length > 0 && originalContent) {
-			const editSiteMap = manifestType.depsForEditSite(originalContent, manifestPath)
-			const kept = []
-			for (const r of remediations) {
-				const result = manifestType.updater(originalContent, [{
-					groupId: r.groupId, artifactId: r.artifactId, newVersion: r.fixedInVersion,
-				}])
-				if (result.applied.length === 0) {
-					kept.push(r)
-					continue
-				}
-				const key = manifestType.changeKey(manifestPath, result.applied[0])
-				// Find any *other* dep at this edit site that matches an exclude pattern.
-				const selfPurl = canonicalDepPurl(r.purl)
+		// Single pass: discover changeKeys, check exclude co-location, and group.
+		// One updater call per remediation (transitives that can't be located are dropped).
+		/** @type {Map<string, AppliedRemediation[]>} */
+		const groups = new Map()
+		for (const remediation of /** @type {AppliedRemediation[]} */ (remediations)) {
+			remediation.files = [manifestPath]
+			const isolated = manifestType.updater(originalContent, [{
+				groupId: remediation.groupId,
+				artifactId: remediation.artifactId,
+				newVersion: remediation.fixedInVersion,
+			}])
+			if (isolated.applied.length === 0) {
+				allSkipped.push({
+					groupId: remediation.groupId,
+					artifactId: remediation.artifactId,
+					newVersion: remediation.fixedInVersion,
+					reason: 'Dependency not directly declared in the manifest',
+				})
+				continue
+			}
+			const key = manifestType.changeKey(manifestPath, isolated.applied[0])
+
+			if (editSiteMap) {
+				const selfPurl = canonicalDepPurl(remediation.purl)
 				const coLocated = editSiteMap.get(key) || []
 				const excludedPurl = coLocated.find(purl => {
 					const canonical = canonicalDepPurl(purl)
-					if (canonical === selfPurl) {
-						return false
-					}
-					return excludeMatchers.some(matches => matches(canonical))
+					return canonical !== selfPurl && excludeMatchers.some(m => m(canonical))
 				})
 				if (excludedPurl) {
 					const editType = manifestType.label === 'maven' ? 'Maven property' : 'Gradle version.ref'
 					allSkipped.push({
-						groupId: r.groupId,
-						artifactId: r.artifactId,
-						newVersion: r.fixedInVersion,
+						groupId: remediation.groupId,
+						artifactId: remediation.artifactId,
+						newVersion: remediation.fixedInVersion,
 						reason: `Shares a ${editType} with excluded dependency ${canonicalDepPurl(excludedPurl)}`,
 					})
-				} else {
-					kept.push(r)
-				}
-			}
-			remediations = kept
-			if (remediations.length === 0) {
-				continue
-			}
-		}
-
-		// Tag each remediation with the manifest it came from so callers can group
-		// changes per dependency across a multi-manifest workspace.
-		for (const remediation of /** @type {AppliedRemediation[]} */ (remediations)) {
-			remediation.files = [manifestPath]
-		}
-
-		if (perDependencyChanges) {
-			// With per-dependency changes every returned remediation must carry an isolated
-			// edit. A dependency the updater cannot locate in this manifest — e.g. a vulnerable
-			// *transitive* dependency surfaced by analysis but not declared here — yields no
-			// applied change, so it is dropped rather than returned with an absent `changes`
-			// array (which would crash callers that iterate `remediation.changes` to build PRs).
-			const applicable = []
-			for (const remediation of remediations) {
-				const isolated = manifestType.updater(originalContent, [{
-					groupId: remediation.groupId,
-					artifactId: remediation.artifactId,
-					newVersion: remediation.fixedInVersion,
-				}])
-				if (isolated.applied.length === 0) {
 					continue
 				}
-				remediation.changes = [{
-					path: manifestPath,
-					after: isolated.content,
-					changeKey: manifestType.changeKey(manifestPath, isolated.applied[0])
-				}]
-				applicable.push(remediation)
 			}
-			allRemediations.push(...applicable)
-		} else {
-			allRemediations.push(...remediations)
+
+			let group = groups.get(key)
+			if (!group) {
+				group = []
+				groups.set(key, group)
+			}
+			group.push(remediation)
+		}
+
+		if (groups.size === 0) {
+			continue
+		}
+
+		// Resolve conflicts and produce per-group isolated content.
+		const allChanges = []
+		for (const [changeKey, members] of groups) {
+			const uniqueVersions = [...new Set(members.map(r => r.fixedInVersion))]
+			let appliedVersion
+			if (uniqueVersions.length === 1) {
+				appliedVersion = uniqueVersions[0]
+			} else {
+				appliedVersion = resolveConflict(uniqueVersions, conflictResolution)
+				if (!uniqueVersions.includes(appliedVersion)) {
+					throw new Error(`conflictResolution returned '${appliedVersion}', which is not one of the candidates: ${uniqueVersions.join(', ')}`)
+				}
+			}
+
+			const changes = members.map(r => ({
+				groupId: r.groupId, artifactId: r.artifactId, newVersion: appliedVersion,
+			}))
+			const result = manifestType.updater(originalContent, changes)
+
+			allGroups.push({
+				changeKey,
+				appliedVersion,
+				remediations: members,
+				edit: { path: manifestPath, after: result.content },
+				divergent: members.some(r => r.fixedInVersion !== appliedVersion),
+			})
+
+			allChanges.push(...changes)
 		}
 
 		if (!dryRun) {
-			// Disk receives the union of every dependency's fix. When
-			// perDependencyChanges is also set, each remediation's `changes[].after`
-			// deliberately stays isolated (single-dep) for branch-per-dep workflows.
-			const result = manifestType.updater(originalContent, remediations.map(r => ({
-				groupId: r.groupId,
-				artifactId: r.artifactId,
-				newVersion: r.fixedInVersion,
-			})))
-			if (result.applied.length > 0) {
-				fs.writeFileSync(manifestPath, result.content, 'utf-8')
+			const combined = manifestType.updater(originalContent, allChanges)
+			if (combined.applied.length > 0) {
+				fs.writeFileSync(manifestPath, combined.content, 'utf-8')
 				appliedFiles.push(manifestPath)
 			}
 		}
 	}
 
-	if (allRemediations.length === 0) {
-		return { exitCode: 0, remediations: [], manifests: manifestPaths, appliedFiles, skipped: allSkipped }
+	const flatRemediations = allGroups.flatMap(g => g.remediations)
+
+	if (flatRemediations.length === 0) {
+		return { exitCode: 0, groups: [], remediations: [], manifests: manifestPaths, appliedFiles, skipped: allSkipped }
 	}
 
-	// Dry-run signals "changes available but not written" via exit code 2.
-	return { exitCode: dryRun ? 2 : 0, remediations: allRemediations, manifests: manifestPaths, appliedFiles, skipped: allSkipped }
+	return { exitCode: dryRun ? 2 : 0, groups: allGroups, remediations: flatRemediations, manifests: manifestPaths, appliedFiles, skipped: allSkipped }
 }

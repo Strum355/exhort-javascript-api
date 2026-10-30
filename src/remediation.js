@@ -466,7 +466,7 @@ function mergeAdvisories(existing, incoming) {
  * @param {string} b
  * @returns {number}
  */
-function compareVersions(a, b) {
+export function compareVersions(a, b) {
 	const partsA = a.split('.')
 	const partsB = b.split('.')
 	const len = Math.max(partsA.length, partsB.length)
