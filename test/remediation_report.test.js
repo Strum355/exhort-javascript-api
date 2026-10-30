@@ -527,7 +527,7 @@ suite('remediation report generator', () => {
 			const report = generateReport(remediations, { skipped })
 
 			expect(report).to.include('### Skipped Remediations')
-			expect(report).to.include('These remediations were skipped')
+			expect(report).to.include('The following remediations were not applied')
 			expect(report).to.include('| Dependency | Version | Reason |')
 			expect(report).to.include(
 				'| com.example:legacy-lib | 2.0.0 | Shares a Maven property with excluded dependency pkg:maven/com.example/excluded |'

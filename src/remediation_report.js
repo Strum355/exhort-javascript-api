@@ -258,7 +258,7 @@ function renderSkippedSection(skipped) {
 	return [
 		'### Skipped Remediations',
 		'',
-		'These remediations were skipped because they share a version edit site with an excluded dependency.',
+		'The following remediations were not applied. See the reason column for details.',
 		'',
 		'| Dependency | Version | Reason |',
 		'| --- | --- | --- |',
